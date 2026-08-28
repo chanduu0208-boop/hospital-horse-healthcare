@@ -345,14 +345,47 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
   const [showRecordList, setShowRecordList] = useState(false);
   const [visibleDateCount, setVisibleDateCount] = useState(DEFAULT_VISIBLE_DATES);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<{ date: string; key: string } | null>(null);
 
   const records = horse.bloodTestRecords ?? [];
   const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
-  const displayedRecords = sorted.slice(0, visibleDateCount);
+
+  const todayStr = getToday();
+  const hasTodayRecord = sorted.some((r) => r.date === todayStr);
+  const VIRTUAL_TODAY_ID = "__virtual_today__";
+  const virtualToday: BloodTestRecord | null = hasTodayRecord ? null : { id: VIRTUAL_TODAY_ID, date: todayStr, items: [] };
+  const columnsSource = virtualToday ? [virtualToday, ...sorted] : sorted;
+  const displayedRecords = columnsSource.slice(0, visibleDateCount);
   const displayedMaps = useMemo(
     () => displayedRecords.map((r) => new Map(r.items.map((it) => [it.key, it]))),
     [displayedRecords]
   );
+
+  const handleCellSave = (date: string, item: { key: string; label: string; unit: string }, rawValue: string) => {
+    const trimmed = rawValue.trim();
+    setEditingCell(null);
+    if (trimmed === "") return;
+    const num = parseFloat(trimmed);
+    if (isNaN(num)) return;
+    const existingRecord = records.find((r) => r.date === date);
+    if (existingRecord) {
+      const hasItem = existingRecord.items.some((it) => it.key === item.key);
+      const newItems = hasItem
+        ? existingRecord.items.map((it) => (it.key === item.key ? { ...it, value: num } : it))
+        : [...existingRecord.items, { key: item.key, label: item.label, value: num, unit: item.unit || undefined }];
+      onUpdate({
+        ...horse,
+        bloodTestRecords: records.map((r) => (r.id === existingRecord.id ? { ...r, items: newItems } : r)),
+      });
+    } else {
+      const newRecord: BloodTestRecord = {
+        id: generateId(),
+        date,
+        items: [{ key: item.key, label: item.label, value: num, unit: item.unit || undefined }],
+      };
+      onUpdate({ ...horse, bloodTestRecords: [...records, newRecord].sort((a, b) => b.date.localeCompare(a.date)) });
+    }
+  };
 
   // プリセット全項目 ＋ 記録に登場したカスタム項目 をまとめたチェックリスト
   const checklist = useMemo(() => {
@@ -416,86 +449,109 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
         </div>
       </div>
 
-      {sorted.length === 0 ? (
-        <p className="text-xs text-gray-400 mb-3">まだ記録がありません（記録すると、項目をタップして推移を見られます）</p>
-      ) : (
-        <>
-          <p className="text-xs text-gray-400 mb-2">項目をタップすると全期間の推移を見られます</p>
-          <div className="overflow-x-auto -mx-1">
-            <table className="w-full border-collapse table-fixed">
-              <colgroup>
-                <col style={{ width: "40%" }} />
-                {displayedRecords.map((r) => <col key={r.id} />)}
-              </colgroup>
-              <thead>
+      <p className="text-xs text-gray-400 mb-2">数値欄をタップすると入力・修正できます／項目名をタップすると全期間の推移を見られます</p>
+      <div className="overflow-x-auto -mx-1">
+        <table className="w-full border-collapse table-fixed">
+          <colgroup>
+            <col style={{ width: "40%" }} />
+            {displayedRecords.map((r) => <col key={r.id} />)}
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="text-left text-[10px] font-semibold text-gray-400 pb-1.5 pl-1 sticky left-0 bg-white">項目</th>
+              {displayedRecords.map((r, i) => {
+                const isVirtual = r.id === VIRTUAL_TODAY_ID;
+                return (
+                  <th key={r.id} className={`text-center text-[11px] font-bold pb-1.5 ${isVirtual ? "text-purple-500" : i === 0 ? "text-purple-600" : "text-gray-400"}`}>
+                    {isVirtual ? "本日" : formatShortDate(r.date)}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map((cat) => (
+              <React.Fragment key={cat}>
                 <tr>
-                  <th className="text-left text-[10px] font-semibold text-gray-400 pb-1.5 pl-1 sticky left-0 bg-white">項目</th>
-                  {displayedRecords.map((r, i) => (
-                    <th key={r.id} className={`text-center text-[11px] font-bold pb-1.5 ${i === 0 ? "text-purple-600" : "text-gray-400"}`}>
-                      {formatShortDate(r.date)}
-                    </th>
-                  ))}
+                  <td colSpan={displayedRecords.length + 1} className="pt-2.5 pb-1 pl-1 text-[10px] font-bold text-gray-400">
+                    {cat}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {categories.map((cat) => (
-                  <React.Fragment key={cat}>
-                    <tr>
-                      <td colSpan={displayedRecords.length + 1} className="pt-2.5 pb-1 pl-1 text-[10px] font-bold text-gray-400">
-                        {cat}
-                      </td>
-                    </tr>
-                    {checklist.filter((i) => i.category === cat).map((item, idx) => (
-                      <tr key={item.key} className={idx % 2 === 1 ? "bg-gray-50" : ""}>
+                {checklist.filter((i) => i.category === cat).map((item, idx) => (
+                  <tr key={item.key} className={idx % 2 === 1 ? "bg-gray-50" : ""}>
+                    <td
+                      onClick={() => setSelectedItemKey(item.key)}
+                      className="py-1.5 pl-1 pr-1 cursor-pointer sticky left-0"
+                      style={{ backgroundColor: idx % 2 === 1 ? "#f9fafb" : "#fff" }}
+                    >
+                      <div className="text-xs text-gray-700 leading-tight truncate">{item.label}</div>
+                      <div className="text-[9px] text-gray-400 leading-tight">{item.unit}</div>
+                    </td>
+                    {displayedMaps.map((map, i) => {
+                      const val = map.get(item.key);
+                      const colDate = displayedRecords[i].date;
+                      const isVirtual = displayedRecords[i].id === VIRTUAL_TODAY_ID;
+                      const isEditing = editingCell?.date === colDate && editingCell?.key === item.key;
+                      if (isEditing) {
+                        return (
+                          <td key={i} className="py-1 px-0.5">
+                            <input
+                              type="number"
+                              step="0.01"
+                              inputMode="decimal"
+                              autoFocus
+                              defaultValue={val ? String(val.value) : ""}
+                              onBlur={(e) => handleCellSave(colDate, item, e.currentTarget.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                                if (e.key === "Escape") setEditingCell(null);
+                              }}
+                              className="w-full text-center text-sm font-bold border border-purple-300 rounded px-1 py-1 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                            />
+                          </td>
+                        );
+                      }
+                      return (
                         <td
-                          onClick={() => setSelectedItemKey(item.key)}
-                          className="py-1.5 pl-1 pr-1 cursor-pointer sticky left-0"
-                          style={{ backgroundColor: idx % 2 === 1 ? "#f9fafb" : "#fff" }}
+                          key={i}
+                          onClick={() => setEditingCell({ date: colDate, key: item.key })}
+                          className={`text-center text-sm font-bold py-1.5 cursor-pointer hover:bg-purple-50 ${
+                            val?.flagged ? "bg-red-50 text-red-600" : val ? "text-gray-700" : isVirtual ? "text-purple-300" : "text-gray-300"
+                          }`}
                         >
-                          <div className="text-xs text-gray-700 leading-tight truncate">{item.label}</div>
-                          <div className="text-[9px] text-gray-400 leading-tight">{item.unit}</div>
+                          {val ? val.value : "－"}
                         </td>
-                        {displayedMaps.map((map, i) => {
-                          const val = map.get(item.key);
-                          return (
-                            <td
-                              key={i}
-                              onClick={() => setSelectedItemKey(item.key)}
-                              className={`text-center text-sm font-bold py-1.5 cursor-pointer ${
-                                val?.flagged ? "bg-red-50 text-red-600" : val ? "text-gray-700" : "text-gray-300"
-                              }`}
-                            >
-                              {val ? val.value : "－"}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </React.Fragment>
+                      );
+                    })}
+                  </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-          {sorted.length > visibleDateCount && (
-            <button
-              onClick={() => setVisibleDateCount((n) => Math.min(n + 3, sorted.length))}
-              className="mt-2 text-xs text-purple-600 font-medium hover:text-purple-700"
-            >
-              もっと見る（+{Math.min(3, sorted.length - visibleDateCount)}日分）
-            </button>
-          )}
+      {columnsSource.length > visibleDateCount && (
+        <button
+          onClick={() => setVisibleDateCount((n) => Math.min(n + 3, columnsSource.length))}
+          className="mt-2 text-xs text-purple-600 font-medium hover:text-purple-700"
+        >
+          もっと見る（+{Math.min(3, columnsSource.length - visibleDateCount)}日分）
+        </button>
+      )}
 
-          {displayedRecords.some((r) => r.notes) && (
-            <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
-              {displayedRecords.filter((r) => r.notes).map((r) => (
-                <p key={r.id} className="text-xs text-gray-500 whitespace-pre-wrap">
-                  <span className="font-semibold text-gray-600">{formatShortDate(r.date)}：</span>{r.notes}
-                </p>
-              ))}
-            </div>
-          )}
-        </>
+      {sorted.length === 0 && (
+        <p className="text-xs text-gray-400 mt-2">まだ記録がありません。「本日」列の数値欄をタップして入力を始められます。</p>
+      )}
+
+      {displayedRecords.some((r) => r.notes) && (
+        <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+          {displayedRecords.filter((r) => r.notes).map((r) => (
+            <p key={r.id} className="text-xs text-gray-500 whitespace-pre-wrap">
+              <span className="font-semibold text-gray-600">{formatShortDate(r.date)}：</span>{r.notes}
+            </p>
+          ))}
+        </div>
       )}
 
       {sorted.length > 0 && (
