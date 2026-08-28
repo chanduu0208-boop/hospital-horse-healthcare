@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Camera, X, AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { Camera, Image as ImageIcon, X, AlertCircle, Loader2, Sparkles } from "lucide-react";
 
 export type ExtractKind = "auto" | "temperature" | "bloodtest" | "weight" | "feeding" | "treatment";
 
@@ -52,7 +52,8 @@ function fileToBase64(file: File): Promise<{ data: string; mediaType: string }> 
 }
 
 export default function PhotoCapture({ kind, title = "写真から自動入力", onExtracted, onClose }: PhotoCaptureProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,15 +114,27 @@ export default function PhotoCapture({ kind, title = "写真から自動入力",
           )}
 
           {!previewUrl ? (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full flex flex-col items-center justify-center gap-2 py-12 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50 hover:bg-violet-100 transition-colors"
-            >
-              <Camera size={32} className="text-violet-500" />
-              <span className="text-sm font-semibold text-violet-700">タップして撮影・写真を選択</span>
-              <span className="text-xs text-violet-400">カルテ、血液検査票、体重計、体温計などを撮影</span>
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 py-10 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50 hover:bg-violet-100 transition-colors"
+              >
+                <Camera size={28} className="text-violet-500" />
+                <span className="text-sm font-semibold text-violet-700">写真を撮る</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => libraryInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 py-10 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50 hover:bg-violet-100 transition-colors"
+              >
+                <ImageIcon size={28} className="text-violet-500" />
+                <span className="text-sm font-semibold text-violet-700">保存済みの画像</span>
+              </button>
+              <p className="col-span-2 text-xs text-violet-400 text-center -mt-1">
+                カルテ、血液検査票、体重計、体温計などを撮影・選択
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -133,7 +146,7 @@ export default function PhotoCapture({ kind, title = "写真から自動入力",
                   className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50"
                   disabled={loading}
                 >
-                  撮り直す
+                  選び直す
                 </button>
                 <button
                   type="button"
@@ -158,10 +171,17 @@ export default function PhotoCapture({ kind, title = "写真から自動入力",
           )}
 
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
+            onChange={handleSelect}
+            className="hidden"
+          />
+          <input
+            ref={libraryInputRef}
+            type="file"
+            accept="image/*"
             onChange={handleSelect}
             className="hidden"
           />
