@@ -1,10 +1,41 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Plus, Camera, Trash2, TestTube2, AlertCircle, Calendar, X } from "lucide-react";
+import React, { useMemo, useRef, useState } from "react";
+import { Plus, Camera, Image as ImageIcon, Trash2, TestTube2, AlertCircle, Calendar, X } from "lucide-react";
 import { Horse, BloodTestRecord, BloodTestItemValue } from "@/lib/types";
 import { BLOOD_TEST_PRESETS, findPreset } from "@/lib/bloodTestConfig";
 import PhotoCapture from "./PhotoCapture";
+
+const PHOTO_MAX_DIMENSION = 1280;
+
+// AIを使わず、検査票の写真をそのまま記録に添付するための軽量リサイズ（localStorage節約のため）
+function compressImageToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > PHOTO_MAX_DIMENSION || height > PHOTO_MAX_DIMENSION) {
+          const scale = PHOTO_MAX_DIMENSION / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(reader.result as string); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = reject;
+      img.src = reader.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 const PRESET_CATEGORIES = ["血球計算", "生化学"] as const;
 const CUSTOM_CATEGORY = "その他";
@@ -57,6 +88,23 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
       : [blankRow()]
   );
   const [error, setError] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setPhotoLoading(true);
+    try {
+      const dataUrl = await compressImageToDataUrl(f);
+      setPhoto(dataUrl);
+    } finally {
+      setPhotoLoading(false);
+      e.target.value = "";
+    }
+  };
 
   const updateRow = (uid: string, patch: Partial<ItemRow>) => {
     setRows((prev) => prev.map((r) => (r.uid === uid ? { ...r, ...patch } : r)));
@@ -81,11 +129,11 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
       if (!label || isNaN(num)) continue;
       items.push({ key: r.key.trim() || label, label, value: num, unit: r.unit.trim() || undefined, flagged: r.flagged || undefined });
     }
-    if (items.length === 0) {
-      setError("少なくとも1項目、名称と数値を入力してください。");
+    if (items.length === 0 && !photo) {
+      setError("少なくとも1項目、名称と数値を入力するか、写真を添付してください。");
       return;
     }
-    onSave({ date, items, notes: notes.trim() || undefined });
+    onSave({ date, items, notes: notes.trim() || undefined, photo: photo ?? undefined });
   };
 
   return (
@@ -177,6 +225,37 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">検査票の写真（任意・AIは使いません）</label>
+              {!photo ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={photoLoading}
+                    className="flex flex-col items-center justify-center gap-1.5 py-5 rounded-xl border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50/40 transition-colors disabled:opacity-60">
+                    <Camera size={20} className="text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">写真を撮る</span>
+                  </button>
+                  <button type="button" onClick={() => libraryInputRef.current?.click()} disabled={photoLoading}
+                    className="flex flex-col items-center justify-center gap-1.5 py-5 rounded-xl border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50/40 transition-colors disabled:opacity-60">
+                    <ImageIcon size={20} className="text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">保存済みの画像</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo} alt="検査票プレビュー" className="w-full rounded-xl border border-gray-200 max-h-64 object-contain bg-gray-50" />
+                  <button type="button" onClick={() => setPhoto(null)}
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/75 rounded-lg text-white">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+              {photoLoading && <p className="text-xs text-gray-400 mt-1">読み込み中...</p>}
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} className="hidden" />
+              <input ref={libraryInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden" />
+              <p className="text-xs text-gray-400 mt-1">写真を見ながら、上の項目を手入力してください。</p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">メモ</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                 placeholder="所見など（任意）" rows={2}
@@ -238,6 +317,22 @@ function ItemHistoryModal({ label, history, onClose }: ItemHistoryModalProps) {
 }
 
 // ============================================================
+// 添付写真のフルサイズ表示
+// ============================================================
+
+function PhotoViewModal({ photo, onClose }: { photo: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[55] flex flex-col items-center justify-center bg-black/80 p-4" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white">
+        <X size={20} />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photo} alt="検査票" className="max-w-full max-h-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+    </div>
+  );
+}
+
+// ============================================================
 // メイン：BloodTestSection
 // ============================================================
 
@@ -249,6 +344,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
   const [showRecordList, setShowRecordList] = useState(false);
   const [visibleDateCount, setVisibleDateCount] = useState(DEFAULT_VISIBLE_DATES);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
 
   const records = horse.bloodTestRecords ?? [];
   const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
@@ -411,6 +507,15 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
             <div className="mt-2 space-y-1.5">
               {sorted.map((r) => (
                 <div key={r.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5">
+                  {r.photo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={r.photo}
+                      alt="検査票"
+                      onClick={() => setViewingPhoto(r.photo!)}
+                      className="w-8 h-8 rounded object-cover border border-gray-200 cursor-pointer flex-shrink-0"
+                    />
+                  )}
                   <span className="text-xs text-gray-500 flex-1">{formatDate(r.date)}（{r.items.length}項目）</span>
                   <button onClick={() => handleDelete(r.id)} className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0">
                     <Trash2 size={12} className="text-red-300 hover:text-red-500" />
@@ -424,6 +529,10 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
 
       {selectedItem && (
         <ItemHistoryModal label={selectedItem.label} history={selectedHistory} onClose={() => setSelectedItemKey(null)} />
+      )}
+
+      {viewingPhoto && (
+        <PhotoViewModal photo={viewingPhoto} onClose={() => setViewingPhoto(null)} />
       )}
 
       {modal === "add" && (

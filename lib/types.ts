@@ -39,6 +39,7 @@ export interface BloodTestRecord {
   date: string; // YYYY-MM-DD
   items: BloodTestItemValue[];
   notes?: string;
+  photo?: string; // 検査票の参考写真（data URL）
 }
 
 export interface FeedingRecord {
