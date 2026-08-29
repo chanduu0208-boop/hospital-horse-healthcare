@@ -21,7 +21,7 @@ import {
   Droplet,
   Scissors,
 } from "lucide-react";
-import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, TemperatureRecord, FeedingRecord, SurgeryRecord } from "@/lib/types";
+import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord } from "@/lib/types";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import PhotoCapture from "./PhotoCapture";
 import BloodTestSection from "./BloodTestSection";
@@ -306,6 +306,7 @@ interface WeightFormProps {
 function WeightForm({ onSave, onClose }: WeightFormProps) {
   const [date, setDate] = useState(getToday());
   const [weight, setWeight] = useState("");
+  const [session, setSession] = useState<WeightSession | "">("");
   const [error, setError] = useState("");
   const [showPhoto, setShowPhoto] = useState(false);
 
@@ -316,7 +317,7 @@ function WeightForm({ onSave, onClose }: WeightFormProps) {
       setError("正しい体重を入力してください");
       return;
     }
-    onSave({ date, weight: num });
+    onSave({ date, weight: num, session: session || undefined });
   };
 
   return (
@@ -381,6 +382,21 @@ function WeightForm({ onSave, onClose }: WeightFormProps) {
                   required
                 />
                 <span className="text-sm text-gray-500 font-medium flex-shrink-0">kg</span>
+              </div>
+            </div>
+
+            {/* 朝夕 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">朝夕（任意）</label>
+              <div className="flex gap-2">
+                {(["朝", "夕"] as WeightSession[]).map((s) => (
+                  <button key={s} type="button" onClick={() => setSession((v) => (v === s ? "" : s))}
+                    className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold transition-all ${
+                      session === s ? "border-blue-400 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                    }`}>
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -685,6 +701,7 @@ interface EditHorseFormProps {
 function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
   const [name, setName] = useState(horse.name);
   const [status, setStatus] = useState<HealthStatus>(horse.status);
+  const [archived, setArchived] = useState(!!horse.archived);
   const [exercise, setExercise] = useState<ExerciseStatus>(horse.exercise ?? "完全舎飼い");
   const [firstVisitDate, setFirstVisitDate] = useState(horse.firstVisitDate);
   const [diagnosis, setDiagnosis] = useState(horse.diagnosis);
@@ -694,7 +711,7 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ ...horse, name: name.trim(), status, exercise, firstVisitDate, diagnosis: diagnosis.trim(), pastHistory: pastHistory.trim() || undefined, notes: notes.trim() });
+    onSave({ ...horse, name: name.trim(), status, archived, exercise, firstVisitDate, diagnosis: diagnosis.trim(), pastHistory: pastHistory.trim() || undefined, notes: notes.trim() });
   };
 
   return (
@@ -717,10 +734,11 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">ステータス</label>
               <div className="flex gap-2">
-                {(["術後入院", "譲渡馬"] as HealthStatus[]).map((s) => {
+                {(["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).map((s) => {
                   const colors: Record<HealthStatus, { sel: string; badge: string }> = {
                     術後入院: { sel: "border-red-400 bg-red-50", badge: "bg-red-100 text-red-700 border-red-200" },
                     譲渡馬: { sel: "border-emerald-400 bg-emerald-50", badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+                    退院馬: { sel: "border-slate-400 bg-slate-50", badge: "bg-slate-100 text-slate-700 border-slate-200" },
                   };
                   return (
                     <label key={s} className={`flex-1 flex justify-center cursor-pointer py-2 rounded-xl border-2 transition-all ${status === s ? colors[s].sel : "border-gray-200"}`}>
@@ -731,6 +749,14 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
                 })}
               </div>
             </div>
+            <label className="flex items-start gap-2.5 p-3 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer">
+              <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-slate-600 flex-shrink-0" />
+              <span>
+                <span className="block text-sm font-medium text-gray-700">経過観察を終了する（アーカイブ）</span>
+                <span className="block text-xs text-gray-400 mt-0.5">術後入院・譲渡馬・退院馬のどの一覧タブにも表示されなくなります。馬管理メニューの検索からはいつでも見つけられ、記録も残ります。</span>
+              </span>
+            </label>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">運動状況</label>
               <ExerciseSelector value={exercise} onChange={setExercise} />
@@ -1128,6 +1154,9 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete }: Horse
                       {sortedWeights.map((wr, idx) => (
                         <div key={wr.id} className="flex items-center gap-2">
                           <span className="text-xs text-gray-400 w-20 flex-shrink-0">{formatDate(wr.date)}</span>
+                          {wr.session && (
+                            <span className="text-xs font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full flex-shrink-0">{wr.session}</span>
+                          )}
                           <span className={`flex-1 text-sm font-semibold ${idx === 0 ? "text-blue-600" : "text-gray-700"}`}>
                             {wr.weight} kg
                           </span>

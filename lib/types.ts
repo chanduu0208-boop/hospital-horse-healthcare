@@ -1,4 +1,4 @@
-export type HealthStatus = "術後入院" | "譲渡馬";
+export type HealthStatus = "術後入院" | "譲渡馬" | "退院馬";
 
 export type ExerciseStatus = "引き運動" | "完全舎飼い" | "サンシャインパドック";
 
@@ -12,10 +12,13 @@ export interface HorseRecord {
   medication?: string;
 }
 
+export type WeightSession = "朝" | "夕";
+
 export interface WeightRecord {
   id: string;
   date: string;   // YYYY-MM-DD
   weight: number; // kg
+  session?: WeightSession; // 朝/夕（任意）
 }
 
 export interface TemperatureRecord {
@@ -74,6 +77,7 @@ export interface Horse {
   diagnosis: string;
   pastHistory?: string;     // 既往歴
   visitCheckedDate?: string;
+  archived?: boolean; // 経過観察終了（一覧タブには表示せず、検索・過去データ閲覧のみ）
   fluidTherapy?: boolean; // 補液中かどうか
   fluidRate?: string;     // 流速（自由入力、例：60ml/h）
   notes?: string;

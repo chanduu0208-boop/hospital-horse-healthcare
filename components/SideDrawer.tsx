@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Search, Trash2, Plus, Settings, CheckSquare, Square } from "lucide-react";
+import { X, Search, Trash2, Plus, Settings, CheckSquare, Square, Archive } from "lucide-react";
 import { Horse, HealthStatus } from "@/lib/types";
 import { EXERCISE_STYLE } from "@/lib/exerciseConfig";
+
+const STATUSES: HealthStatus[] = ["術後入院", "譲渡馬", "退院馬"];
 
 interface Props {
   isOpen: boolean;
@@ -17,11 +19,13 @@ interface Props {
 const STATUS_DOT: Record<HealthStatus, string> = {
   術後入院: "bg-red-400",
   譲渡馬: "bg-emerald-400",
+  退院馬: "bg-slate-400",
 };
 
 const STATUS_LABEL_COLOR: Record<HealthStatus, string> = {
   術後入院: "text-red-600",
   譲渡馬: "text-emerald-600",
+  退院馬: "text-slate-600",
 };
 
 export default function SideDrawer({
@@ -41,9 +45,11 @@ export default function SideDrawer({
   );
 
   const grouped = {
-    術後入院: filtered.filter((h) => h.status === "術後入院"),
-    譲渡馬: filtered.filter((h) => h.status === "譲渡馬"),
+    術後入院: filtered.filter((h) => h.status === "術後入院" && !h.archived),
+    譲渡馬: filtered.filter((h) => h.status === "譲渡馬" && !h.archived),
+    退院馬: filtered.filter((h) => h.status === "退院馬" && !h.archived),
   };
+  const archivedHorses = filtered.filter((h) => h.archived);
 
   // ---- 選択操作 ----
   const toggleSelect = (id: string) => {
@@ -191,8 +197,8 @@ export default function SideDrawer({
           {!isManageMode && (
             <div className="mx-3 mt-3 mb-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
               <p className="text-xs text-gray-500 font-medium mb-2">ステータス凡例</p>
-              <div className="flex gap-3">
-                {(["術後入院", "譲渡馬"] as HealthStatus[]).map((s) => (
+              <div className="flex gap-3 flex-wrap">
+                {STATUSES.map((s) => (
                   <div key={s} className="flex items-center gap-1.5">
                     <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_DOT[s]}`} />
                     <span className={`text-xs font-medium ${STATUS_LABEL_COLOR[s]}`}>{s}</span>
@@ -203,7 +209,7 @@ export default function SideDrawer({
           )}
 
           {/* グループ別一覧 */}
-          {(["術後入院", "譲渡馬"] as HealthStatus[]).map((status) => {
+          {STATUSES.map((status) => {
             const group = grouped[status];
             if (group.length === 0) return null;
             return (
@@ -268,6 +274,53 @@ export default function SideDrawer({
               </div>
             );
           })}
+
+          {/* アーカイブ（経過観察終了・一覧タブには表示しないが検索・閲覧はできる） */}
+          {archivedHorses.length > 0 && (
+            <div className="mb-2">
+              <div className="px-3 py-1.5 flex items-center gap-2">
+                <Archive size={12} className="text-gray-400 flex-shrink-0" />
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  アーカイブ
+                </span>
+                <span className="text-xs text-gray-400">({archivedHorses.length}頭)</span>
+              </div>
+              {archivedHorses.map((horse) => {
+                const isSelected = selectedIds.has(horse.id);
+                return (
+                  <button
+                    key={horse.id}
+                    onClick={() => {
+                      if (isManageMode) {
+                        toggleSelect(horse.id);
+                      } else {
+                        onSelectHorse(horse.id);
+                        onClose();
+                      }
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${
+                      isManageMode && isSelected ? "bg-blue-50" : "hover:bg-gray-50 active:bg-gray-100"
+                    }`}
+                  >
+                    {isManageMode && (
+                      <span className="flex-shrink-0">
+                        {isSelected ? (
+                          <CheckSquare size={18} className="text-blue-500" />
+                        ) : (
+                          <Square size={18} className="text-gray-300" />
+                        )}
+                      </span>
+                    )}
+                    {!isManageMode && <Archive size={13} className="text-gray-300 flex-shrink-0" />}
+                    <span className="flex-1 text-sm font-medium text-gray-500 truncate min-w-0">
+                      {horse.name}
+                    </span>
+                    <span className="text-xs text-gray-300 flex-shrink-0">{horse.status}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {filtered.length === 0 && (
             <div className="text-center py-8 text-gray-400">

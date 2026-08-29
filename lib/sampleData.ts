@@ -190,12 +190,27 @@ export const sampleHorses: Horse[] = [
   {
     id: "12",
     name: "ブルースカイドリーム",
-    status: "譲渡馬",
+    status: "退院馬",
     exercise: "サンシャインパドック",
     firstVisitDate: "2026-01-15",
     diagnosis: "なし",
     records: [
       { id: "r12-1", date: "2026-01-15", condition: "良好", veterinarian: "鈴木獣医師", treatment: "初回健康診断", notes: "全身状態良好。異常なし。" },
+      { id: "r12-2", date: "2026-02-01", condition: "退院", veterinarian: "鈴木獣医師", treatment: "退院確認", notes: "経過良好のため退院。" },
+    ],
+  },
+  {
+    id: "13",
+    name: "ウィンターグレイス",
+    status: "退院馬",
+    archived: true,
+    exercise: "サンシャインパドック",
+    firstVisitDate: "2025-11-01",
+    diagnosis: "軽度跛行（回復済み）",
+    notes: "経過良好のため経過観察終了。次回入院時のために記録は保持。",
+    records: [
+      { id: "r13-1", date: "2025-11-01", condition: "軽度跛行", veterinarian: "山田獣医師", treatment: "安静・投薬", notes: "初診時の記録。" },
+      { id: "r13-2", date: "2025-12-01", condition: "完治", veterinarian: "山田獣医師", treatment: "最終確認", notes: "跛行消失。経過観察終了。" },
     ],
   },
 ];

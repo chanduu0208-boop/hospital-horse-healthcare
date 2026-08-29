@@ -18,7 +18,7 @@ const CALENDAR_KEY  = "horse-hospital-calendar-v1";
 // 旧バージョンのキー（起動時に削除）
 const OLD_KEYS = ["horse-health-v1", "horse-health-v2", "horse-health-v3", "horse-health-v4"];
 
-const VALID_STATUSES: HealthStatus[] = ["術後入院", "譲渡馬"];
+const VALID_STATUSES: HealthStatus[] = ["術後入院", "譲渡馬", "退院馬"];
 // 旧ステータスからの読み替え（往診中・経過観察→術後入院、健康→譲渡馬）
 const LEGACY_STATUS_MAP: Record<string, HealthStatus> = {
   往診中: "術後入院",
@@ -58,6 +58,7 @@ function migrateHorse(h: Record<string, unknown>): Horse {
     firstVisitDate: (h.firstVisitDate as string) ?? getToday(),
     diagnosis: (h.diagnosis as string) ?? "なし",
     visitCheckedDate: h.visitCheckedDate as string | undefined,
+    archived: h.archived as boolean | undefined,
     fluidTherapy: h.fluidTherapy as boolean | undefined,
     fluidRate: h.fluidRate as string | undefined,
     pastHistory: h.pastHistory as string | undefined,
@@ -118,11 +119,13 @@ function generateId(): string {
 const TAB_COLORS: Record<HealthStatus, { dot: string; active: string }> = {
   術後入院: { dot: "bg-red-400",     active: "text-red-600" },
   譲渡馬:   { dot: "bg-emerald-400", active: "text-emerald-600" },
+  退院馬:   { dot: "bg-slate-400",   active: "text-slate-600" },
 };
 
 const STATUS_CARD_BAR: Record<HealthStatus, string> = {
   術後入院: "bg-gradient-to-b from-red-300 to-red-500",
   譲渡馬:   "bg-gradient-to-b from-emerald-300 to-emerald-500",
+  退院馬:   "bg-gradient-to-b from-slate-300 to-slate-500",
 };
 
 // ============================================================
@@ -410,6 +413,7 @@ function QuickRecordModal({
 const STATUS_ADD_STYLE: Record<HealthStatus, { sel: string; badge: string }> = {
   術後入院: { sel: "border-red-400 bg-red-50", badge: "bg-red-100 text-red-700 border-red-200" },
   譲渡馬:   { sel: "border-emerald-400 bg-emerald-50", badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  退院馬:   { sel: "border-slate-400 bg-slate-50", badge: "bg-slate-100 text-slate-700 border-slate-200" },
 };
 
 function AddHorseModal({
@@ -479,7 +483,7 @@ function AddHorseModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">ステータス</label>
               <div className="flex gap-2">
-                {(["術後入院", "譲渡馬"] as HealthStatus[]).map((s) => (
+                {(["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).map((s) => (
                   <label key={s} className={`flex-1 flex justify-center cursor-pointer py-2 rounded-xl border-2 transition-all ${status === s ? STATUS_ADD_STYLE[s].sel : "border-gray-200"}`}>
                     <input type="radio" value={s} checked={status === s} onChange={() => setStatus(s)} className="sr-only" />
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${STATUS_ADD_STYLE[s].badge}`}>{s}</span>
@@ -632,7 +636,7 @@ export default function HomePage() {
     }
   };
 
-  const filteredHorses = horses.filter((h) => h.status === activeTab);
+  const filteredHorses = horses.filter((h) => h.status === activeTab && !h.archived);
 
   const sortedHorses =
     activeTab === "術後入院"
@@ -642,8 +646,8 @@ export default function HomePage() {
         ]
       : filteredHorses;
 
-  const tabCounts = (["術後入院", "譲渡馬"] as HealthStatus[]).reduce(
-    (acc, tab) => { acc[tab] = horses.filter((h) => h.status === tab).length; return acc; },
+  const tabCounts = (["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).reduce(
+    (acc, tab) => { acc[tab] = horses.filter((h) => h.status === tab && !h.archived).length; return acc; },
     {} as Record<HealthStatus, number>
   );
 
@@ -790,7 +794,7 @@ export default function HomePage() {
       {/* ボトムタブ */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-gray-200 shadow-lg">
         <div className="flex">
-          {(["術後入院", "譲渡馬"] as HealthStatus[]).map((tab) => {
+          {(["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).map((tab) => {
             const isActive = activeTab === tab;
             const colors = TAB_COLORS[tab];
             return (
