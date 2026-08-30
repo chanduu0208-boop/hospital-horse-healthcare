@@ -306,30 +306,13 @@ export default function CalendarView({
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 15);
 
-  // ---- 表示中の月における入院期間（現在入院中の馬のみ・入院日〜本日） ----
-  const monthStart = new Date(viewYear, viewMonth, 1);
-  const monthEnd = new Date(viewYear, viewMonth, daysInMonth);
-  const todayDate = new Date(today);
-  const stayBars = horses
-    .filter((h) => h.status === "術後入院" && !h.archived)
-    .map((h) => {
-      const admit = new Date(h.firstVisitDate);
-      if (admit > monthEnd) return null;
-      const barStart = admit > monthStart ? admit : monthStart;
-      const barEnd = todayDate < monthEnd ? todayDate : monthEnd;
-      if (barStart > barEnd) return null;
-      const startDay = barStart.getDate();
-      const endDay = barEnd.getDate();
-      const stayDays = Math.floor((todayDate.getTime() - admit.getTime()) / 86400000) + 1;
-      return {
-        horse: h,
-        leftPct: ((startDay - 1) / daysInMonth) * 100,
-        widthPct: ((endDay - startDay + 1) / daysInMonth) * 100,
-        stayDays,
-      };
-    })
-    .filter((v): v is NonNullable<typeof v> => v !== null)
-    .sort((a, b) => a.horse.firstVisitDate.localeCompare(b.horse.firstVisitDate));
+  // ---- 日付ごとの入院中の馬（術後入院・入院日〜本日、未来日は対象外） ----
+  const hospitalizedHorses = horses.filter((h) => h.status === "術後入院" && !h.archived);
+  const hospitalizedOn = (dateStr: string): Horse[] => {
+    if (dateStr > today) return [];
+    return hospitalizedHorses.filter((h) => h.firstVisitDate <= dateStr);
+  };
+  const selectedHospitalized = hospitalizedOn(selectedDate);
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear((y) => y - 1); setViewMonth(11); }
@@ -404,6 +387,7 @@ export default function CalendarView({
                   const isToday    = ds === today;
                   const isSelected = ds === selectedDate;
                   const dayEvs     = eventsByDate[ds] ?? [];
+                  const stayCount  = hospitalizedOn(ds).length;
                   const isSat = di === 5;
                   const isSun = di === 6;
                   return (
@@ -425,6 +409,12 @@ export default function CalendarView({
                         isSun      ? "text-red-500" :
                                      "text-gray-700"
                       }`}>{day}</span>
+                      {/* 入院頭数 */}
+                      <span className={`text-[9px] font-bold leading-tight mt-0.5 ${
+                        stayCount === 0 ? "invisible" : isSelected ? "text-white" : "text-red-500"
+                      }`}>
+                        {stayCount || 0}頭
+                      </span>
                       {/* イベントドット */}
                       <div className="flex gap-0.5 mt-0.5 h-2 items-center">
                         {dayEvs.slice(0, 3).map((ev, ei) => {
@@ -441,34 +431,6 @@ export default function CalendarView({
             ))}
           </div>
         </div>
-
-        {/* ── 入院期間（表示中の月・入院中の馬のみ） ── */}
-        {stayBars.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <h2 className="font-bold text-gray-700 text-sm mb-3 flex items-center gap-2">
-              <CalendarDays size={15} className="text-red-500" />
-              入院期間
-            </h2>
-            <div className="space-y-3">
-              {stayBars.map(({ horse, leftPct, widthPct, stayDays }) => (
-                <div key={horse.id}>
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <span className="text-xs font-medium text-gray-700 truncate min-w-0">{horse.name}</span>
-                    <span className="text-xs text-gray-400 flex-shrink-0">
-                      {formatShortDate(horse.firstVisitDate)}〜（{stayDays}日目）
-                    </span>
-                  </div>
-                  <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="absolute h-full bg-red-400 rounded-full"
-                      style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 3)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* ── 選択日のイベント ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -489,6 +451,15 @@ export default function CalendarView({
               予定を追加
             </button>
           </div>
+
+          {selectedHospitalized.length > 0 && (
+            <div className="mb-3 p-2.5 bg-red-50 rounded-xl border border-red-100">
+              <p className="text-xs font-semibold text-red-600 mb-1">入院中（{selectedHospitalized.length}頭）</p>
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {selectedHospitalized.map((h) => h.name).join("、")}
+              </p>
+            </div>
+          )}
 
           {selectedEvents.length === 0 ? (
             <p className="text-sm text-gray-400 py-3 text-center">この日の予定はありません</p>
