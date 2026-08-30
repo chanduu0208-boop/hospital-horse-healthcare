@@ -56,6 +56,7 @@ function migrateHorse(h: Record<string, unknown>): Horse {
     status: resolveStatus(h.status),
     exercise: resolveExercise(h.exercise),
     firstVisitDate: (h.firstVisitDate as string) ?? getToday(),
+    dischargeDate: h.dischargeDate as string | undefined,
     diagnosis: (h.diagnosis as string) ?? "なし",
     visitCheckedDate: h.visitCheckedDate as string | undefined,
     archived: h.archived as boolean | undefined,

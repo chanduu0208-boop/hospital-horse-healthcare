@@ -84,6 +84,7 @@ export interface Horse {
   status: HealthStatus;
   exercise: ExerciseStatus;
   firstVisitDate: string;
+  dischargeDate?: string;   // 退院日（入力すると自動的に退院馬へ移動）
   diagnosis: string;
   pastHistory?: string;     // 既往歴
   visitCheckedDate?: string;

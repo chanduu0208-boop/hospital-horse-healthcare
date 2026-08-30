@@ -21,6 +21,7 @@ import {
   Droplet,
   Scissors,
   FlaskConical,
+  LogOut,
 } from "lucide-react";
 import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord, ExamRecord, ExamType } from "@/lib/types";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
@@ -1185,6 +1186,50 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* 退院日（入力すると自動的に退院馬へ移動） */}
+              {horse.status !== "譲渡馬" && (
+                <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100">
+                  <LogOut size={15} className="text-gray-400 flex-shrink-0" />
+                  <span className="text-xs text-gray-500 flex-shrink-0">退院日</span>
+                  <div className="flex-1 relative min-w-0">
+                    <div className="pointer-events-none">
+                      <span className={`text-sm ${horse.dischargeDate ? "text-gray-700 font-semibold" : "text-blue-500 font-medium"}`}>
+                        {horse.dischargeDate ? formatDate(horse.dischargeDate) : "未定　→ タップで設定"}
+                      </span>
+                    </div>
+                    <input
+                      type="date"
+                      value={horse.dischargeDate ?? ""}
+                      onChange={(e) => {
+                        const newDate = e.target.value || undefined;
+                        onUpdate({
+                          ...horse,
+                          dischargeDate: newDate,
+                          status: newDate ? "退院馬" : (horse.status === "退院馬" ? "術後入院" : horse.status),
+                        });
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  {horse.dischargeDate && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUpdate({
+                          ...horse,
+                          dischargeDate: undefined,
+                          status: horse.status === "退院馬" ? "術後入院" : horse.status,
+                        });
+                      }}
+                      className="text-xs text-gray-400 flex-shrink-0 relative z-10"
+                    >
+                      未定に戻す
+                    </button>
                   )}
                 </div>
               )}
