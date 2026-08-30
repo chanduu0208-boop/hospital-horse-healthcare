@@ -170,7 +170,7 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
               <label className="block text-sm font-medium text-gray-700 mb-2">検査項目</label>
               <div className="space-y-2.5">
                 {rows.map((row) => (
-                  <div key={row.uid} className={`p-2.5 rounded-xl border space-y-2 ${row.flagged ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-100"}`}>
+                  <div key={row.uid} className={`p-2.5 rounded-xl border space-y-2 ${row.flagged ? "bg-yellow-50 border-yellow-300" : "bg-gray-50 border-gray-100"}`}>
                     <div className="flex items-center gap-2">
                       <select
                         value={BLOOD_TEST_PRESETS.some((p) => p.key === row.key) ? row.key : "__custom__"}
@@ -208,7 +208,7 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
                       type="button"
                       onClick={() => updateRow(row.uid, { flagged: !row.flagged })}
                       className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${
-                        row.flagged ? "bg-red-100 text-red-600 border-red-300" : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                        row.flagged ? "bg-yellow-100 text-yellow-800 border-yellow-400" : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
                       }`}
                     >
                       <AlertCircle size={13} />
@@ -300,12 +300,12 @@ function ItemHistoryModal({ label, history, onClose }: ItemHistoryModalProps) {
           ) : (
             <div className="space-y-1.5">
               {history.map((row, i) => (
-                <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 ${row.flagged ? "bg-red-50 border border-red-200" : "bg-gray-50"}`}>
+                <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 ${row.flagged ? "bg-yellow-100 border border-yellow-300" : "bg-gray-50"}`}>
                   <span className="text-xs text-gray-400 w-20 flex-shrink-0">{formatDate(row.date)}</span>
-                  <span className={`flex-1 text-sm font-semibold ${row.flagged ? "text-red-600" : i === 0 ? "text-purple-700" : "text-gray-700"}`}>
+                  <span className={`flex-1 text-sm font-semibold ${row.flagged ? "text-yellow-800" : i === 0 ? "text-purple-700" : "text-gray-700"}`}>
                     {row.value} {row.unit}
                   </span>
-                  {row.flagged && <AlertCircle size={13} className="text-red-400 flex-shrink-0" />}
+                  {row.flagged && <AlertCircle size={13} className="text-yellow-600 flex-shrink-0" />}
                 </div>
               ))}
             </div>
@@ -346,6 +346,8 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
   const [visibleDateCount, setVisibleDateCount] = useState(DEFAULT_VISIBLE_DATES);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ date: string; key: string } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
 
   const records = horse.bloodTestRecords ?? [];
   const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
@@ -384,6 +386,33 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
         items: [{ key: item.key, label: item.label, value: num, unit: item.unit || undefined }],
       };
       onUpdate({ ...horse, bloodTestRecords: [...records, newRecord].sort((a, b) => b.date.localeCompare(a.date)) });
+    }
+  };
+
+  const handleToggleFlag = (date: string, key: string) => {
+    const record = records.find((r) => r.date === date);
+    if (!record) return;
+    const newItems = record.items.map((it) => (it.key === key ? { ...it, flagged: !it.flagged } : it));
+    onUpdate({
+      ...horse,
+      bloodTestRecords: records.map((r) => (r.id === record.id ? { ...r, items: newItems } : r)),
+    });
+  };
+
+  const LONG_PRESS_MS = 500;
+  const startLongPress = (date: string, key: string, hasValue: boolean) => {
+    if (!hasValue) return;
+    longPressFiredRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      handleToggleFlag(date, key);
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(20);
+    }, LONG_PRESS_MS);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
   };
 
@@ -449,7 +478,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 mb-2">数値欄をタップすると入力・修正できます／項目名をタップすると全期間の推移を見られます</p>
+      <p className="text-xs text-gray-400 mb-2">数値欄はタップで入力・修正、長押しで要注意（黄色）を切り替え／項目名タップで全期間の推移</p>
       <div className="overflow-x-auto -mx-1">
         <table className="w-full border-collapse table-fixed">
           <colgroup>
@@ -514,9 +543,17 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
                       return (
                         <td
                           key={i}
-                          onClick={() => setEditingCell({ date: colDate, key: item.key })}
-                          className={`text-center text-sm font-bold py-1.5 cursor-pointer hover:bg-purple-50 ${
-                            val?.flagged ? "bg-red-50 text-red-600" : val ? "text-gray-700" : isVirtual ? "text-purple-300" : "text-gray-300"
+                          onMouseDown={() => startLongPress(colDate, item.key, !!val)}
+                          onMouseUp={cancelLongPress}
+                          onMouseLeave={cancelLongPress}
+                          onTouchStart={() => startLongPress(colDate, item.key, !!val)}
+                          onTouchEnd={cancelLongPress}
+                          onClick={() => {
+                            if (longPressFiredRef.current) { longPressFiredRef.current = false; return; }
+                            setEditingCell({ date: colDate, key: item.key });
+                          }}
+                          className={`text-center text-sm font-bold py-1.5 cursor-pointer hover:bg-purple-50 select-none ${
+                            val?.flagged ? "bg-yellow-100 text-yellow-800" : val ? "text-gray-700" : isVirtual ? "text-purple-300" : "text-gray-300"
                           }`}
                         >
                           {val ? val.value : "－"}
