@@ -80,13 +80,10 @@ export interface MedicationSchedule {
   active: boolean;          // false＝投与終了（一覧には表示せず記録のみ残す）
 }
 
-export interface MedicationDoseLog {
+export interface ExcretionRecord {
   id: string;
-  scheduleId: string;
-  date: string;   // 対象日 (YYYY-MM-DD)
-  time: string;    // 対応する予定時刻 (HH:mm)
-  given: boolean;
-  givenAt?: string; // 実際に記録した時刻 (HH:mm)
+  date: string;    // YYYY-MM-DD
+  content: string;  // 排便・排尿の性状など（自由記述）
 }
 
 export interface CalendarEvent {
@@ -122,5 +119,5 @@ export interface Horse {
   surgeryRecords?: SurgeryRecord[];
   examRecords?: ExamRecord[];
   medicationSchedules?: MedicationSchedule[];
-  medicationDoseLogs?: MedicationDoseLog[];
+  excretionRecords?: ExcretionRecord[];
 }

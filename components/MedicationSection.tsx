@@ -1,15 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, X, Pill, Syringe, CheckCircle2, Circle, Trash2, Edit2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
-import { Horse, MedicationSchedule, MedicationDoseLog, MedicationRoute } from "@/lib/types";
+import { Plus, X, Pill, Syringe, Trash2, Edit2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Horse, MedicationSchedule, MedicationRoute } from "@/lib/types";
 
 function generateId() {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-}
-function getToday() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 const ROUTES: MedicationRoute[] = ["経口", "静脈注射"];
@@ -176,35 +172,13 @@ export default function MedicationSection({ horse, onUpdate }: { horse: Horse; o
   const [showEnded, setShowEnded] = useState(false);
 
   const schedules = horse.medicationSchedules ?? [];
-  const doseLogs = horse.medicationDoseLogs ?? [];
   const activeSchedules = schedules.filter((s) => s.active);
   const endedSchedules = schedules.filter((s) => !s.active);
-  const todayStr = getToday();
 
-  // 本日のチェックリスト（時刻順）
-  const todayItems = activeSchedules
+  // 投与予定を時刻順にフラット化（薬名＋時刻のチップ表示用）
+  const scheduleItems = activeSchedules
     .flatMap((s) => s.times.map((t) => ({ schedule: s, time: t })))
     .sort((a, b) => a.time.localeCompare(b.time));
-
-  const isGiven = (scheduleId: string, time: string) =>
-    doseLogs.some((l) => l.scheduleId === scheduleId && l.date === todayStr && l.time === time && l.given);
-
-  const toggleGiven = (scheduleId: string, time: string) => {
-    const existing = doseLogs.find((l) => l.scheduleId === scheduleId && l.date === todayStr && l.time === time);
-    const now = new Date();
-    const nowStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    if (existing) {
-      onUpdate({
-        ...horse,
-        medicationDoseLogs: doseLogs.map((l) =>
-          l.id === existing.id ? { ...l, given: !l.given, givenAt: !l.given ? nowStr : undefined } : l
-        ),
-      });
-    } else {
-      const newLog: MedicationDoseLog = { id: generateId(), scheduleId, date: todayStr, time, given: true, givenAt: nowStr };
-      onUpdate({ ...horse, medicationDoseLogs: [...doseLogs, newLog] });
-    }
-  };
 
   const handleSaveSchedule = (s: Omit<MedicationSchedule, "id" | "active">) => {
     if (editTarget) {
@@ -229,11 +203,7 @@ export default function MedicationSection({ horse, onUpdate }: { horse: Horse; o
   };
 
   const handleDelete = (s: MedicationSchedule) => {
-    onUpdate({
-      ...horse,
-      medicationSchedules: schedules.filter((sc) => sc.id !== s.id),
-      medicationDoseLogs: doseLogs.filter((l) => l.scheduleId !== s.id),
-    });
+    onUpdate({ ...horse, medicationSchedules: schedules.filter((sc) => sc.id !== s.id) });
     setDeleteTarget(null);
   };
 
@@ -257,30 +227,20 @@ export default function MedicationSection({ horse, onUpdate }: { horse: Horse; o
         <p className="text-xs text-gray-400">まだ投薬予定が登録されていません。</p>
       ) : (
         <>
-          <p className="text-xs text-gray-400 mb-2">本日の投与チェック（タップで済に切り替え）</p>
-          <div className="space-y-1.5 mb-3">
-            {todayItems.map(({ schedule, time }) => {
-              const given = isGiven(schedule.id, time);
+          <p className="text-xs text-gray-400 mb-2">投与予定（時刻順）</p>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {scheduleItems.map(({ schedule, time }) => {
+              const s = ROUTE_STYLE[schedule.route];
+              const Icon = s.icon;
               return (
-                <button
+                <span
                   key={`${schedule.id}_${time}`}
-                  onClick={() => toggleGiven(schedule.id, time)}
-                  className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 border text-left transition-colors ${
-                    given ? "bg-teal-50 border-teal-200" : "bg-gray-50 border-gray-100 hover:border-gray-200"
-                  }`}
+                  className={`inline-flex items-center gap-1 text-xs font-bold pl-2 pr-2.5 py-1.5 rounded-full border ${s.bg} ${s.text} ${s.border}`}
                 >
-                  {given ? (
-                    <CheckCircle2 size={18} className="text-teal-500 flex-shrink-0" />
-                  ) : (
-                    <Circle size={18} className="text-gray-300 flex-shrink-0" />
-                  )}
-                  <span className={`text-sm font-bold w-12 flex-shrink-0 ${given ? "text-teal-700" : "text-gray-600"}`}>{time}</span>
-                  <span className={`text-sm flex-1 min-w-0 truncate ${given ? "text-teal-800 line-through decoration-teal-300" : "text-gray-700"}`}>
-                    {schedule.name}
-                    {schedule.dosage && <span className="text-gray-400 font-normal"> {schedule.dosage}</span>}
-                  </span>
-                  <RouteBadge route={schedule.route} />
-                </button>
+                  <Icon size={11} className="flex-shrink-0" />
+                  {schedule.name}
+                  <span className="font-normal opacity-70">{schedule.dosage ? ` ${schedule.dosage}` : ""} {time}</span>
+                </span>
               );
             })}
           </div>

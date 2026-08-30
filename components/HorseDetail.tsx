@@ -22,8 +22,9 @@ import {
   Scissors,
   FlaskConical,
   LogOut,
+  Droplets,
 } from "lucide-react";
-import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord, ExamRecord, ExamType } from "@/lib/types";
+import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord, ExamRecord, ExamType, ExcretionRecord } from "@/lib/types";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import PhotoCapture from "./PhotoCapture";
 import BloodTestSection from "./BloodTestSection";
@@ -698,6 +699,72 @@ function SurgeryForm({ onSave, onClose }: SurgeryFormProps) {
 }
 
 // ============================================================
+// 排便・排尿記録フォーム
+// ============================================================
+
+interface ExcretionFormProps {
+  onSave: (r: Omit<ExcretionRecord, "id">) => void;
+  onClose: () => void;
+}
+
+function ExcretionForm({ onSave, onClose }: ExcretionFormProps) {
+  const [date, setDate] = useState(getToday());
+  const [content, setContent] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim()) { setError("排便・排尿の様子を入力してください。"); return; }
+    onSave({ date, content: content.trim() });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end overflow-hidden">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+          <h3 className="font-bold text-gray-800 text-base">排便・排尿を記録</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X size={18} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="overflow-y-auto overflow-x-hidden p-4 pb-10">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+                <AlertCircle size={15} className="text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">日付</label>
+              <div className="relative">
+                <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50 pointer-events-none">
+                  <Calendar size={15} className="text-gray-400 flex-shrink-0" />
+                  <span className="text-sm text-gray-700">{date === getToday() ? `今日 (${formatDate(date)})` : formatDate(date)}</span>
+                </div>
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value || getToday())}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">様子・性状</label>
+              <textarea value={content} onChange={(e) => { setContent(e.target.value); setError(""); }}
+                placeholder="例：ボロは軟便気味、量は普通。尿は正常。" rows={3} autoFocus
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none" />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">キャンセル</button>
+              <button type="submit" className="flex-1 py-3 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 shadow-md shadow-amber-200">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // 検査所見フォーム
 // ============================================================
 
@@ -886,7 +953,7 @@ interface HorseDetailProps {
   onAddCalendarEvent: (title: string) => void;
 }
 
-type ModalType = "editHorse" | "addRecord" | "editRecord" | "addWeight" | "addTemperature" | "addFeeding" | "addSurgery" | "examFindings" | "confirmDeleteHorse" | "confirmDeleteRecord" | null;
+type ModalType = "editHorse" | "addRecord" | "editRecord" | "addWeight" | "addTemperature" | "addExcretion" | "addFeeding" | "addSurgery" | "examFindings" | "confirmDeleteHorse" | "confirmDeleteRecord" | null;
 
 export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCalendarEvent }: HorseDetailProps) {
   const [modal, setModal] = useState<ModalType>(null);
@@ -897,6 +964,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
   const [isPastHistoryExpanded, setIsPastHistoryExpanded] = useState(false);
   const [isWeightExpanded, setIsWeightExpanded] = useState(false);
   const [isTempExpanded, setIsTempExpanded] = useState(false);
+  const [isExcretionExpanded, setIsExcretionExpanded] = useState(false);
   const [isFeedingExpanded, setIsFeedingExpanded] = useState(false);
   const [isSurgeryExpanded, setIsSurgeryExpanded] = useState(false);
 
@@ -963,6 +1031,19 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
     onUpdate({ ...horse, temperatureRecords: (horse.temperatureRecords ?? []).filter((t) => t.id !== id) });
   };
 
+  const handleAddExcretion = (r: Omit<ExcretionRecord, "id">) => {
+    onUpdate({
+      ...horse,
+      excretionRecords: [...(horse.excretionRecords ?? []), { ...r, id: generateId() }]
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    });
+    setModal(null);
+  };
+
+  const handleDeleteExcretion = (id: string) => {
+    onUpdate({ ...horse, excretionRecords: (horse.excretionRecords ?? []).filter((e) => e.id !== id) });
+  };
+
   const handleAddFeeding = (r: Omit<FeedingRecord, "id">) => {
     onUpdate({
       ...horse,
@@ -1016,6 +1097,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
 
   const sortedWeights = [...(horse.weightRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const sortedTemps = [...(horse.temperatureRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
+  const sortedExcretions = [...(horse.excretionRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const sortedFeedings = [...(horse.feedingRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const sortedSurgeries = [...(horse.surgeryRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const sortedExams = [...(horse.examRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
@@ -1269,6 +1351,22 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                     </p>
                   </div>
                 </button>
+                <button
+                  onClick={() => setIsExcretionExpanded((v) => !v)}
+                  className="flex items-start gap-2 flex-1 text-left min-w-0"
+                >
+                  <Droplets size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <span className="text-xs text-gray-500">排便・排尿</span>
+                    <p className="flex items-center gap-1 text-sm font-semibold text-gray-800">
+                      {sortedExcretions.length > 0
+                        ? <span className="truncate max-w-[9rem]">{sortedExcretions[0].content}</span>
+                        : <span className="text-gray-400 font-normal text-xs">未記録</span>
+                      }
+                      <ChevronDown size={13} className={`text-gray-400 transition-transform flex-shrink-0 ${isExcretionExpanded ? "rotate-180" : ""}`} />
+                    </p>
+                  </div>
+                </button>
               </div>
 
               {/* 体重推移（タップで展開） */}
@@ -1344,6 +1442,42 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                           {t.notes && <span className="text-xs text-gray-400 truncate max-w-[30%]">{t.notes}</span>}
                           <button
                             onClick={() => handleDeleteTemperature(t.id)}
+                            className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0"
+                          >
+                            <Trash2 size={12} className="text-red-300 hover:text-red-500" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 排便・排尿（タップで展開） */}
+              {isExcretionExpanded && (
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-500">排便・排尿の記録</span>
+                    <button
+                      onClick={() => setModal("addExcretion")}
+                      className="flex items-center gap-1 text-xs text-amber-600 font-medium bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded-lg transition-colors"
+                    >
+                      <Plus size={12} />
+                      記録追加
+                    </button>
+                  </div>
+                  {sortedExcretions.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-2">記録がありません</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {sortedExcretions.map((ex, idx) => (
+                        <div key={ex.id} className="flex items-start gap-2">
+                          <span className="text-xs text-gray-400 w-20 flex-shrink-0 pt-0.5">{formatDate(ex.date)}</span>
+                          <span className={`flex-1 text-sm whitespace-pre-wrap ${idx === 0 ? "text-amber-700 font-semibold" : "text-gray-700"}`}>
+                            {ex.content}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteExcretion(ex.id)}
                             className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0"
                           >
                             <Trash2 size={12} className="text-red-300 hover:text-red-500" />
@@ -1583,6 +1717,9 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
       )}
       {modal === "addTemperature" && (
         <TemperatureForm onSave={handleAddTemperature} onClose={() => setModal(null)} />
+      )}
+      {modal === "addExcretion" && (
+        <ExcretionForm onSave={handleAddExcretion} onClose={() => setModal(null)} />
       )}
       {modal === "addFeeding" && (
         <FeedingForm onSave={handleAddFeeding} onClose={() => setModal(null)} />
