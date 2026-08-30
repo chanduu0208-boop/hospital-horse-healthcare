@@ -20,11 +20,18 @@ import {
   Utensils,
   Droplet,
   Scissors,
+  FlaskConical,
 } from "lucide-react";
-import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord } from "@/lib/types";
+import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord, ExamRecord, ExamType } from "@/lib/types";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import PhotoCapture from "./PhotoCapture";
 import BloodTestSection from "./BloodTestSection";
+
+const EXAM_TYPES: { key: ExamType; label: string; calendarTitle: string }[] = [
+  { key: "US", label: "US", calendarTitle: "エコー検査" },
+  { key: "X-ray", label: "X-ray", calendarTitle: "レントゲン撮影" },
+  { key: "その他", label: "その他", calendarTitle: "その他" },
+];
 
 // 運動バッジ（詳細画面用）
 function ExerciseBadge({ exercise }: { exercise: ExerciseStatus }) {
@@ -689,6 +696,56 @@ function SurgeryForm({ onSave, onClose }: SurgeryFormProps) {
 }
 
 // ============================================================
+// 検査所見フォーム
+// ============================================================
+
+interface ExamFindingsFormProps {
+  exam: ExamRecord;
+  onSave: (findings: string) => void;
+  onClose: () => void;
+}
+
+function ExamFindingsForm({ exam, onSave, onClose }: ExamFindingsFormProps) {
+  const [findings, setFindings] = useState(exam.findings ?? "");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(findings);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end overflow-hidden">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h3 className="font-bold text-gray-800 text-base">{exam.type}の所見</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{formatDate(exam.date)} 実施</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X size={18} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="overflow-y-auto overflow-x-hidden p-4 pb-10">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">所見</label>
+              <textarea value={findings} onChange={(e) => setFindings(e.target.value)}
+                placeholder="例：右前肢に骨瘤形成を確認。経過観察。" rows={5} autoFocus
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none" />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">キャンセル</button>
+              <button type="submit" className="flex-1 py-3 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 shadow-md shadow-purple-200">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // 馬情報編集フォーム
 // ============================================================
 
@@ -824,14 +881,16 @@ interface HorseDetailProps {
   onBack: () => void;
   onUpdate: (updated: Horse) => void;
   onDelete: () => void;
+  onAddCalendarEvent: (title: string) => void;
 }
 
-type ModalType = "editHorse" | "addRecord" | "editRecord" | "addWeight" | "addTemperature" | "addFeeding" | "addSurgery" | "confirmDeleteHorse" | "confirmDeleteRecord" | null;
+type ModalType = "editHorse" | "addRecord" | "editRecord" | "addWeight" | "addTemperature" | "addFeeding" | "addSurgery" | "examFindings" | "confirmDeleteHorse" | "confirmDeleteRecord" | null;
 
-export default function HorseDetail({ horse, onBack, onUpdate, onDelete }: HorseDetailProps) {
+export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCalendarEvent }: HorseDetailProps) {
   const [modal, setModal] = useState<ModalType>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [editTargetRecord, setEditTargetRecord] = useState<HorseRecord | null>(null);
+  const [editTargetExam, setEditTargetExam] = useState<ExamRecord | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [isPastHistoryExpanded, setIsPastHistoryExpanded] = useState(false);
   const [isWeightExpanded, setIsWeightExpanded] = useState(false);
@@ -928,12 +987,41 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete }: Horse
     onUpdate({ ...horse, surgeryRecords: (horse.surgeryRecords ?? []).filter((s) => s.id !== id) });
   };
 
+  const handleLogExam = (exam: { key: ExamType; label: string; calendarTitle: string }) => {
+    const record: ExamRecord = { id: generateId(), date: getToday(), type: exam.key };
+    onUpdate({
+      ...horse,
+      examRecords: [...(horse.examRecords ?? []), record].sort((a, b) => b.date.localeCompare(a.date)),
+    });
+    onAddCalendarEvent(exam.calendarTitle);
+  };
+
+  const handleSaveExamFindings = (findings: string) => {
+    if (!editTargetExam) return;
+    onUpdate({
+      ...horse,
+      examRecords: (horse.examRecords ?? []).map((e) =>
+        e.id === editTargetExam.id ? { ...e, findings: findings.trim() || undefined } : e
+      ),
+    });
+    setEditTargetExam(null);
+    setModal(null);
+  };
+
+  const handleDeleteExam = (id: string) => {
+    onUpdate({ ...horse, examRecords: (horse.examRecords ?? []).filter((e) => e.id !== id) });
+  };
+
   const sortedWeights = [...(horse.weightRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const sortedTemps = [...(horse.temperatureRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const sortedFeedings = [...(horse.feedingRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
   const sortedSurgeries = [...(horse.surgeryRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
+  const sortedExams = [...(horse.examRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date));
 
   const sortedRecords = [...horse.records].sort((a, b) => b.date.localeCompare(a.date));
+
+  // 入院◯日目（入院日を1日目として数える）
+  const stayDays = Math.max(1, Math.floor((new Date(getToday()).getTime() - new Date(horse.firstVisitDate).getTime()) / 86400000) + 1);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -1041,7 +1129,10 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete }: Horse
                   <Calendar size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <span className="text-xs text-gray-500">入院日</span>
-                    <p className="text-sm font-semibold text-gray-800">{formatDate(horse.firstVisitDate)}</p>
+                    <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                      {formatDate(horse.firstVisitDate)}
+                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{stayDays}日目</span>
+                    </p>
                   </div>
                 </div>
                 <button
@@ -1252,6 +1343,53 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete }: Horse
                   </div>
                 </div>
               )}
+
+              {/* 検査（US・X-ray・その他） */}
+              <div className="pt-3 mt-1 border-t border-gray-100">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <FlaskConical size={15} className="text-gray-400" />
+                  <span className="text-xs text-gray-500 font-medium">検査</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {EXAM_TYPES.map((exam) => (
+                    <button
+                      key={exam.key}
+                      type="button"
+                      onClick={() => handleLogExam(exam)}
+                      className="py-2.5 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 active:scale-95 transition-all"
+                    >
+                      {exam.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mb-2">実施したらボタンをタップ。カレンダーに自動記録されます。</p>
+                {sortedExams.length > 0 && (
+                  <div className="space-y-1.5">
+                    {sortedExams.map((exam) => (
+                      <div key={exam.id} className="flex items-start gap-2 bg-gray-50 hover:bg-gray-100 rounded-lg px-2.5 py-1.5 transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => { setEditTargetExam(exam); setModal("examFindings"); }}
+                          className="flex-1 flex items-start gap-2 text-left min-w-0"
+                        >
+                          <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">{formatDate(exam.date)}</span>
+                          <span className="text-xs font-bold text-purple-600 flex-shrink-0 pt-0.5">{exam.type}</span>
+                          <span className="flex-1 text-xs text-gray-600 min-w-0 truncate pt-0.5">
+                            {exam.findings || <span className="text-gray-400">タップして所見を追加</span>}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExam(exam.id)}
+                          className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0"
+                        >
+                          <Trash2 size={12} className="text-red-300 hover:text-red-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1402,6 +1540,13 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete }: Horse
       )}
       {modal === "addSurgery" && (
         <SurgeryForm onSave={handleAddSurgery} onClose={() => setModal(null)} />
+      )}
+      {modal === "examFindings" && editTargetExam && (
+        <ExamFindingsForm
+          exam={editTargetExam}
+          onSave={handleSaveExamFindings}
+          onClose={() => { setEditTargetExam(null); setModal(null); }}
+        />
       )}
       {modal === "editHorse" && (
         <EditHorseForm horse={horse} onSave={(u) => { onUpdate(u); setModal(null); }} onClose={() => setModal(null)} />

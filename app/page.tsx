@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Plus, Check, Calendar, X, AlertCircle, CalendarDays } from "lucide-react";
-import { Horse, HealthStatus, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord } from "@/lib/types";
+import { Horse, HealthStatus, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord, ExamRecord } from "@/lib/types";
 import { sampleHorses } from "@/lib/sampleData";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import SideDrawer from "@/components/SideDrawer";
@@ -68,6 +68,7 @@ function migrateHorse(h: Record<string, unknown>): Horse {
     bloodTestRecords: Array.isArray(h.bloodTestRecords) ? (h.bloodTestRecords as BloodTestRecord[]) : [],
     feedingRecords: Array.isArray(h.feedingRecords) ? (h.feedingRecords as FeedingRecord[]) : [],
     surgeryRecords: Array.isArray(h.surgeryRecords) ? (h.surgeryRecords as SurgeryRecord[]) : [],
+    examRecords: Array.isArray(h.examRecords) ? (h.examRecords as ExamRecord[]) : [],
     // records がなければ healthRecords / treatmentRecords から変換
     records: (() => {
       if (Array.isArray(h.records)) {
@@ -690,6 +691,13 @@ export default function HomePage() {
             onBack={() => setSelectedHorseId(null)}
             onUpdate={updateHorse}
             onDelete={() => deleteHorse(selectedHorse.id)}
+            onAddCalendarEvent={(title) => addEvent({
+              id: generateId(),
+              date: getToday(),
+              horseId: selectedHorse.id,
+              horseName: selectedHorse.name,
+              title,
+            })}
           />
         </div>
       )}

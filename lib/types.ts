@@ -58,6 +58,15 @@ export interface SurgeryRecord {
   notes?: string;   // 術式・内容など
 }
 
+export type ExamType = "US" | "X-ray" | "その他";
+
+export interface ExamRecord {
+  id: string;
+  date: string;        // 実施日 (YYYY-MM-DD)
+  type: ExamType;
+  findings?: string;    // 所見（任意・後から追記可）
+}
+
 export interface CalendarEvent {
   id: string;
   date: string;       // YYYY-MM-DD
@@ -87,4 +96,5 @@ export interface Horse {
   bloodTestRecords?: BloodTestRecord[];
   feedingRecords?: FeedingRecord[];
   surgeryRecords?: SurgeryRecord[];
+  examRecords?: ExamRecord[];
 }
