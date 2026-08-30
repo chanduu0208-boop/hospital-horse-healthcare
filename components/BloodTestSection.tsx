@@ -581,8 +581,10 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
                             setEditingCell({ recordId: colId, key: item.key });
                           }}
                           style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}
-                          className={`text-center text-sm font-bold py-1.5 cursor-pointer hover:bg-purple-50 select-none ${
-                            val?.flagged ? "bg-yellow-100 text-yellow-800" : val ? "text-gray-700" : isVirtual ? "text-purple-300" : "text-gray-300"
+                          className={`text-center text-sm font-bold py-1.5 cursor-pointer select-none ${
+                            val?.flagged
+                              ? "bg-yellow-300 text-yellow-950 rounded-md"
+                              : `hover:bg-purple-50 ${val ? "text-gray-700" : isVirtual ? "text-purple-300" : "text-gray-300"}`
                           }`}
                         >
                           {val ? val.value : "－"}
