@@ -2,19 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
-  overscroll-behavior-x: none;
   background-color: #f3f4f6;
 }
 
-/* 横スクロールを完全に防ぐ */
-#__next,
-body > div {
-  overflow-x: hidden;
+/* 横スクロールを完全に防ぐ（html一箇所のみに限定し、position: sticky が
+   ネストした無関係なスクロールコンテナに邪魔されないようにする） */
+html {
   max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 * {

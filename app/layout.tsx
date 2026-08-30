@@ -19,11 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body className="overflow-x-hidden">
-        <div className="overflow-x-hidden max-w-[100vw]">
-          {children}
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
