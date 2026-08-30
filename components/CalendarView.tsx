@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, X, Trash2, CalendarDays,
 } from "lucide-react";
-import { Horse, CalendarEvent } from "@/lib/types";
+import { Horse, HealthStatus, CalendarEvent } from "@/lib/types";
+
+const STATUS_GROUPS: HealthStatus[] = ["術後入院", "譲渡馬", "退院馬"];
 
 // ============================================================
 // 定数
@@ -83,14 +85,15 @@ function AddEventModal({
   onSave: (ev: CalendarEvent) => void;
   onClose: () => void;
 }) {
+  const selectableHorses = horses.filter((h) => !h.archived);
   const [date, setDate] = useState(selectedDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [horseId, setHorseId] = useState(horses[0]?.id ?? "");
+  const [horseId, setHorseId] = useState(selectableHorses[0]?.id ?? "");
   const [title, setTitle] = useState("レントゲン撮影");
   const [customTitle, setCustomTitle] = useState("");
   const [notes, setNotes] = useState("");
 
-  const selectedHorse = horses.find((h) => h.id === horseId);
+  const selectedHorse = selectableHorses.find((h) => h.id === horseId);
 
   const handleSave = () => {
     if (!horseId) return;
@@ -155,7 +158,7 @@ function AddEventModal({
           {/* 対象の馬 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">対象の馬</label>
-            {horses.length === 0 ? (
+            {selectableHorses.length === 0 ? (
               <p className="text-sm text-gray-400">馬が登録されていません</p>
             ) : (
               <select
@@ -163,9 +166,17 @@ function AddEventModal({
                 onChange={(e) => setHorseId(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
               >
-                {horses.map((h) => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
-                ))}
+                {STATUS_GROUPS.map((status) => {
+                  const group = selectableHorses.filter((h) => h.status === status);
+                  if (group.length === 0) return null;
+                  return (
+                    <optgroup key={status} label={status}>
+                      {group.map((h) => (
+                        <option key={h.id} value={h.id}>{h.name}</option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             )}
           </div>
@@ -289,9 +300,9 @@ export default function CalendarView({
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
 
-  // ---- 今後の予定（今日以降、最大15件）----
+  // ---- 今後の予定（今日以降、最大15件）実施済みの記録（検査ログなど）は含めない ----
   const upcomingEvents = [...events]
-    .filter((e) => e.date >= today)
+    .filter((e) => e.date >= today && !e.isLog)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 15);
 
@@ -324,6 +335,13 @@ export default function CalendarView({
           className="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
         >
           今日
+        </button>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="p-2 -mr-2 rounded-xl hover:bg-gray-100 active:bg-gray-200"
+          title="予定を追加"
+        >
+          <Plus size={22} className="text-gray-700" />
         </button>
       </header>
 

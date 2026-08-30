@@ -697,6 +697,7 @@ export default function HomePage() {
               horseId: selectedHorse.id,
               horseName: selectedHorse.name,
               title,
+              isLog: true,
             })}
           />
         </div>

@@ -75,6 +75,7 @@ export interface CalendarEvent {
   title: string;
   notes?: string;
   sourceKey?: string; // 自動生成イベントの識別子
+  isLog?: boolean;    // 実施済みの記録（検査ボタンなど）。今後の予定には出さない
 }
 
 export interface Horse {
