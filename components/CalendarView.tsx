@@ -306,6 +306,31 @@ export default function CalendarView({
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 15);
 
+  // ---- 表示中の月における入院期間（現在入院中の馬のみ・入院日〜本日） ----
+  const monthStart = new Date(viewYear, viewMonth, 1);
+  const monthEnd = new Date(viewYear, viewMonth, daysInMonth);
+  const todayDate = new Date(today);
+  const stayBars = horses
+    .filter((h) => h.status === "術後入院" && !h.archived)
+    .map((h) => {
+      const admit = new Date(h.firstVisitDate);
+      if (admit > monthEnd) return null;
+      const barStart = admit > monthStart ? admit : monthStart;
+      const barEnd = todayDate < monthEnd ? todayDate : monthEnd;
+      if (barStart > barEnd) return null;
+      const startDay = barStart.getDate();
+      const endDay = barEnd.getDate();
+      const stayDays = Math.floor((todayDate.getTime() - admit.getTime()) / 86400000) + 1;
+      return {
+        horse: h,
+        leftPct: ((startDay - 1) / daysInMonth) * 100,
+        widthPct: ((endDay - startDay + 1) / daysInMonth) * 100,
+        stayDays,
+      };
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== null)
+    .sort((a, b) => a.horse.firstVisitDate.localeCompare(b.horse.firstVisitDate));
+
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear((y) => y - 1); setViewMonth(11); }
     else setViewMonth((m) => m - 1);
@@ -416,6 +441,34 @@ export default function CalendarView({
             ))}
           </div>
         </div>
+
+        {/* ── 入院期間（表示中の月・入院中の馬のみ） ── */}
+        {stayBars.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <h2 className="font-bold text-gray-700 text-sm mb-3 flex items-center gap-2">
+              <CalendarDays size={15} className="text-red-500" />
+              入院期間
+            </h2>
+            <div className="space-y-3">
+              {stayBars.map(({ horse, leftPct, widthPct, stayDays }) => (
+                <div key={horse.id}>
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-xs font-medium text-gray-700 truncate min-w-0">{horse.name}</span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">
+                      {formatShortDate(horse.firstVisitDate)}〜（{stayDays}日目）
+                    </span>
+                  </div>
+                  <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="absolute h-full bg-red-400 rounded-full"
+                      style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 3)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── 選択日のイベント ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
