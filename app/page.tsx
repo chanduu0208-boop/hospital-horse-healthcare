@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Plus, Check, Calendar, X, AlertCircle, CalendarDays } from "lucide-react";
-import { Horse, HealthStatus, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord, ExamRecord } from "@/lib/types";
+import { Horse, HealthStatus, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord, ExamRecord, MedicationSchedule, MedicationDoseLog } from "@/lib/types";
 import { sampleHorses } from "@/lib/sampleData";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import SideDrawer from "@/components/SideDrawer";
@@ -70,6 +70,8 @@ function migrateHorse(h: Record<string, unknown>): Horse {
     feedingRecords: Array.isArray(h.feedingRecords) ? (h.feedingRecords as FeedingRecord[]) : [],
     surgeryRecords: Array.isArray(h.surgeryRecords) ? (h.surgeryRecords as SurgeryRecord[]) : [],
     examRecords: Array.isArray(h.examRecords) ? (h.examRecords as ExamRecord[]) : [],
+    medicationSchedules: Array.isArray(h.medicationSchedules) ? (h.medicationSchedules as MedicationSchedule[]) : [],
+    medicationDoseLogs: Array.isArray(h.medicationDoseLogs) ? (h.medicationDoseLogs as MedicationDoseLog[]) : [],
     // records がなければ healthRecords / treatmentRecords から変換
     records: (() => {
       if (Array.isArray(h.records)) {

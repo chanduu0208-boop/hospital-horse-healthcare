@@ -68,6 +68,27 @@ export interface ExamRecord {
   findings?: string;    // 所見（任意・後から追記可）
 }
 
+export type MedicationRoute = "経口" | "静脈注射";
+
+export interface MedicationSchedule {
+  id: string;
+  name: string;            // 薬品名
+  route: MedicationRoute;
+  dosage?: string;          // 用量（自由入力、例: 10mg／1錠／5mL）
+  times: string[];          // 投与予定時刻のリスト (HH:mm)
+  notes?: string;
+  active: boolean;          // false＝投与終了（一覧には表示せず記録のみ残す）
+}
+
+export interface MedicationDoseLog {
+  id: string;
+  scheduleId: string;
+  date: string;   // 対象日 (YYYY-MM-DD)
+  time: string;    // 対応する予定時刻 (HH:mm)
+  given: boolean;
+  givenAt?: string; // 実際に記録した時刻 (HH:mm)
+}
+
 export interface CalendarEvent {
   id: string;
   date: string;       // YYYY-MM-DD
@@ -100,4 +121,6 @@ export interface Horse {
   feedingRecords?: FeedingRecord[];
   surgeryRecords?: SurgeryRecord[];
   examRecords?: ExamRecord[];
+  medicationSchedules?: MedicationSchedule[];
+  medicationDoseLogs?: MedicationDoseLog[];
 }

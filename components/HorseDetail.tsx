@@ -27,6 +27,7 @@ import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightS
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import PhotoCapture from "./PhotoCapture";
 import BloodTestSection from "./BloodTestSection";
+import MedicationSection from "./MedicationSection";
 
 const EXAM_TYPES: { key: ExamType; label: string; calendarTitle: string }[] = [
   { key: "US", label: "US", calendarTitle: "エコー検査" },
@@ -1438,6 +1439,9 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
             </div>
           </div>
         </div>
+
+        {/* 投薬 */}
+        <MedicationSection horse={horse} onUpdate={onUpdate} />
 
         {/* 血液検査 */}
         <BloodTestSection horse={horse} onUpdate={onUpdate} />
