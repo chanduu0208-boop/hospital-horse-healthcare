@@ -40,6 +40,7 @@ export interface BloodTestItemValue {
 export interface BloodTestRecord {
   id: string;
   date: string; // YYYY-MM-DD
+  session?: WeightSession; // 朝/夕（任意・同日に2回採血する馬向け）
   items: BloodTestItemValue[];
   notes?: string;
   photo?: string; // 検査票の参考写真（data URL）

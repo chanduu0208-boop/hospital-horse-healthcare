@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { Plus, Camera, Image as ImageIcon, Trash2, TestTube2, AlertCircle, Calendar, X } from "lucide-react";
-import { Horse, BloodTestRecord, BloodTestItemValue } from "@/lib/types";
+import { Horse, BloodTestRecord, BloodTestItemValue, WeightSession } from "@/lib/types";
 import { BLOOD_TEST_PRESETS, findPreset } from "@/lib/bloodTestConfig";
 import PhotoCapture from "./PhotoCapture";
 
@@ -81,6 +81,7 @@ interface BloodTestFormProps {
 
 function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClose }: BloodTestFormProps) {
   const [date, setDate] = useState(initialDate ?? getToday());
+  const [session, setSession] = useState<WeightSession | "">("");
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [rows, setRows] = useState<ItemRow[]>(
     initialItems && initialItems.length > 0
@@ -133,7 +134,7 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
       setError("少なくとも1項目、名称と数値を入力するか、写真を添付してください。");
       return;
     }
-    onSave({ date, items, notes: notes.trim() || undefined, photo: photo ?? undefined });
+    onSave({ date, session: session || undefined, items, notes: notes.trim() || undefined, photo: photo ?? undefined });
   };
 
   return (
@@ -163,6 +164,20 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
                 </div>
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value || getToday())}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">朝夕（任意・同日2回採血する場合）</label>
+              <div className="flex gap-2">
+                {(["朝", "夕"] as WeightSession[]).map((s) => (
+                  <button key={s} type="button" onClick={() => setSession((v) => (v === s ? "" : s))}
+                    className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold transition-all ${
+                      session === s ? "border-purple-400 bg-purple-50 text-purple-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                    }`}>
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -279,7 +294,7 @@ function BloodTestForm({ initialDate, initialItems, initialNotes, onSave, onClos
 
 interface ItemHistoryModalProps {
   label: string;
-  history: { date: string; value: number; unit?: string; flagged?: boolean }[];
+  history: { date: string; session?: WeightSession; value: number; unit?: string; flagged?: boolean }[];
   onClose: () => void;
 }
 
@@ -301,7 +316,9 @@ function ItemHistoryModal({ label, history, onClose }: ItemHistoryModalProps) {
             <div className="space-y-1.5">
               {history.map((row, i) => (
                 <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 ${row.flagged ? "bg-yellow-100 border border-yellow-300" : "bg-gray-50"}`}>
-                  <span className="text-xs text-gray-400 w-20 flex-shrink-0">{formatDate(row.date)}</span>
+                  <span className="text-xs text-gray-400 w-24 flex-shrink-0">
+                    {formatDate(row.date)}{row.session && ` ${row.session}`}
+                  </span>
                   <span className={`flex-1 text-sm font-semibold ${row.flagged ? "text-yellow-800" : i === 0 ? "text-purple-700" : "text-gray-700"}`}>
                     {row.value} {row.unit}
                   </span>
@@ -345,12 +362,18 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
   const [showRecordList, setShowRecordList] = useState(false);
   const [visibleDateCount, setVisibleDateCount] = useState(DEFAULT_VISIBLE_DATES);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
-  const [editingCell, setEditingCell] = useState<{ date: string; key: string } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ recordId: string; key: string } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFiredRef = useRef(false);
 
   const records = horse.bloodTestRecords ?? [];
-  const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
+  const sessionRank = (s?: WeightSession) => (s === "夕" ? 0 : s === "朝" ? 1 : 0.5);
+  const compareRecordsDesc = (a: BloodTestRecord, b: BloodTestRecord) => {
+    const d = b.date.localeCompare(a.date);
+    if (d !== 0) return d;
+    return sessionRank(a.session) - sessionRank(b.session);
+  };
+  const sorted = [...records].sort(compareRecordsDesc);
 
   const todayStr = getToday();
   const hasTodayRecord = sorted.some((r) => r.date === todayStr);
@@ -363,13 +386,13 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
     [displayedRecords]
   );
 
-  const handleCellSave = (date: string, item: { key: string; label: string; unit: string }, rawValue: string) => {
+  const handleCellSave = (recordId: string, colDate: string, item: { key: string; label: string; unit: string }, rawValue: string) => {
     const trimmed = rawValue.trim();
     setEditingCell(null);
     if (trimmed === "") return;
     const num = parseFloat(trimmed);
     if (isNaN(num)) return;
-    const existingRecord = records.find((r) => r.date === date);
+    const existingRecord = recordId === VIRTUAL_TODAY_ID ? undefined : records.find((r) => r.id === recordId);
     if (existingRecord) {
       const hasItem = existingRecord.items.some((it) => it.key === item.key);
       const newItems = hasItem
@@ -382,15 +405,15 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
     } else {
       const newRecord: BloodTestRecord = {
         id: generateId(),
-        date,
+        date: colDate,
         items: [{ key: item.key, label: item.label, value: num, unit: item.unit || undefined }],
       };
-      onUpdate({ ...horse, bloodTestRecords: [...records, newRecord].sort((a, b) => b.date.localeCompare(a.date)) });
+      onUpdate({ ...horse, bloodTestRecords: [...records, newRecord].sort(compareRecordsDesc) });
     }
   };
 
-  const handleToggleFlag = (date: string, key: string) => {
-    const record = records.find((r) => r.date === date);
+  const handleToggleFlag = (recordId: string, key: string) => {
+    const record = records.find((r) => r.id === recordId);
     if (!record) return;
     const newItems = record.items.map((it) => (it.key === key ? { ...it, flagged: !it.flagged } : it));
     onUpdate({
@@ -400,12 +423,12 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
   };
 
   const LONG_PRESS_MS = 500;
-  const startLongPress = (date: string, key: string, hasValue: boolean) => {
-    if (!hasValue) return;
+  const startLongPress = (recordId: string, key: string, hasValue: boolean) => {
+    if (!hasValue || recordId === VIRTUAL_TODAY_ID) return;
     longPressFiredRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
       longPressFiredRef.current = true;
-      handleToggleFlag(date, key);
+      handleToggleFlag(recordId, key);
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(20);
     }, LONG_PRESS_MS);
   };
@@ -443,10 +466,10 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
   const selectedHistory = useMemo(() => {
     if (!selectedItemKey) return [];
     return [...records]
-      .sort((a, b) => b.date.localeCompare(a.date))
+      .sort(compareRecordsDesc)
       .flatMap((r) => {
         const it = r.items.find((v) => v.key === selectedItemKey);
-        return it ? [{ date: r.date, value: it.value, unit: it.unit, flagged: it.flagged }] : [];
+        return it ? [{ date: r.date, session: r.session, value: it.value, unit: it.unit, flagged: it.flagged }] : [];
       });
   }, [records, selectedItemKey]);
 
@@ -493,6 +516,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
                 return (
                   <th key={r.id} className={`text-center text-[11px] font-bold pb-1.5 ${isVirtual ? "text-purple-500" : i === 0 ? "text-purple-600" : "text-gray-400"}`}>
                     {isVirtual ? "本日" : formatShortDate(r.date)}
+                    {r.session && <span className="block text-[9px] font-semibold text-purple-400">{r.session}</span>}
                   </th>
                 );
               })}
@@ -518,9 +542,11 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
                     </td>
                     {displayedMaps.map((map, i) => {
                       const val = map.get(item.key);
-                      const colDate = displayedRecords[i].date;
-                      const isVirtual = displayedRecords[i].id === VIRTUAL_TODAY_ID;
-                      const isEditing = editingCell?.date === colDate && editingCell?.key === item.key;
+                      const colRecord = displayedRecords[i];
+                      const colDate = colRecord.date;
+                      const colId = colRecord.id;
+                      const isVirtual = colId === VIRTUAL_TODAY_ID;
+                      const isEditing = editingCell?.recordId === colId && editingCell?.key === item.key;
                       if (isEditing) {
                         return (
                           <td key={i} className="py-1 px-0.5">
@@ -530,7 +556,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
                               inputMode="decimal"
                               autoFocus
                               defaultValue={val ? String(val.value) : ""}
-                              onBlur={(e) => handleCellSave(colDate, item, e.currentTarget.value)}
+                              onBlur={(e) => handleCellSave(colId, colDate, item, e.currentTarget.value)}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") e.currentTarget.blur();
                                 if (e.key === "Escape") setEditingCell(null);
@@ -543,14 +569,14 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
                       return (
                         <td
                           key={i}
-                          onMouseDown={() => startLongPress(colDate, item.key, !!val)}
+                          onMouseDown={() => startLongPress(colId, item.key, !!val)}
                           onMouseUp={cancelLongPress}
                           onMouseLeave={cancelLongPress}
-                          onTouchStart={() => startLongPress(colDate, item.key, !!val)}
+                          onTouchStart={() => startLongPress(colId, item.key, !!val)}
                           onTouchEnd={cancelLongPress}
                           onClick={() => {
                             if (longPressFiredRef.current) { longPressFiredRef.current = false; return; }
-                            setEditingCell({ date: colDate, key: item.key });
+                            setEditingCell({ recordId: colId, key: item.key });
                           }}
                           className={`text-center text-sm font-bold py-1.5 cursor-pointer hover:bg-purple-50 select-none ${
                             val?.flagged ? "bg-yellow-100 text-yellow-800" : val ? "text-gray-700" : isVirtual ? "text-purple-300" : "text-gray-300"
@@ -585,7 +611,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
         <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
           {displayedRecords.filter((r) => r.notes).map((r) => (
             <p key={r.id} className="text-xs text-gray-500 whitespace-pre-wrap">
-              <span className="font-semibold text-gray-600">{formatShortDate(r.date)}：</span>{r.notes}
+              <span className="font-semibold text-gray-600">{formatShortDate(r.date)}{r.session && ` ${r.session}`}：</span>{r.notes}
             </p>
           ))}
         </div>
@@ -609,7 +635,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
                       className="w-8 h-8 rounded object-cover border border-gray-200 cursor-pointer flex-shrink-0"
                     />
                   )}
-                  <span className="text-xs text-gray-500 flex-1">{formatDate(r.date)}（{r.items.length}項目）</span>
+                  <span className="text-xs text-gray-500 flex-1">{formatDate(r.date)}{r.session && ` ${r.session}`}（{r.items.length}項目）</span>
                   <button onClick={() => handleDelete(r.id)} className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0">
                     <Trash2 size={12} className="text-red-300 hover:text-red-500" />
                   </button>
