@@ -306,11 +306,11 @@ export default function CalendarView({
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 15);
 
-  // ---- 日付ごとの入院中の馬（術後入院・入院日〜本日、未来日は対象外） ----
-  const hospitalizedHorses = horses.filter((h) => h.status === "術後入院" && !h.archived);
+  // ---- 日付ごとに入院していた馬（入院日〜退院日で判定。退院済み・アーカイブ済みでも
+  //      その期間内であれば対象に含める。ステータスは問わない。未来日は対象外） ----
   const hospitalizedOn = (dateStr: string): Horse[] => {
     if (dateStr > today) return [];
-    return hospitalizedHorses.filter((h) => h.firstVisitDate <= dateStr);
+    return horses.filter((h) => h.firstVisitDate <= dateStr && (!h.dischargeDate || h.dischargeDate >= dateStr));
   };
   const selectedHospitalized = hospitalizedOn(selectedDate);
 
@@ -454,7 +454,9 @@ export default function CalendarView({
 
           {selectedHospitalized.length > 0 && (
             <div className="mb-3 p-2.5 bg-red-50 rounded-xl border border-red-100">
-              <p className="text-xs font-semibold text-red-600 mb-1">入院中（{selectedHospitalized.length}頭）</p>
+              <p className="text-xs font-semibold text-red-600 mb-1">
+                {selectedDate === today ? "入院中" : "入院していた"}（{selectedHospitalized.length}頭）
+              </p>
               <p className="text-xs text-gray-700 leading-relaxed">
                 {selectedHospitalized.map((h) => h.name).join("、")}
               </p>

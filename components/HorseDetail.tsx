@@ -837,7 +837,15 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ ...horse, name: name.trim(), status, archived, exercise, firstVisitDate, diagnosis: diagnosis.trim(), pastHistory: pastHistory.trim() || undefined, notes: notes.trim() });
+    // ステータスを退院馬に変更した際、退院日が未設定なら変更した日を自動設定する
+    // （分類の変更を忘れていた場合の保険。日付は後から編集で修正できる）
+    let dischargeDate = horse.dischargeDate;
+    if (status === "退院馬" && horse.status !== "退院馬" && !dischargeDate) {
+      dischargeDate = getToday();
+    } else if (status !== "退院馬" && horse.status === "退院馬") {
+      dischargeDate = undefined;
+    }
+    onSave({ ...horse, name: name.trim(), status, dischargeDate, archived, exercise, firstVisitDate, diagnosis: diagnosis.trim(), pastHistory: pastHistory.trim() || undefined, notes: notes.trim() });
   };
 
   return (
