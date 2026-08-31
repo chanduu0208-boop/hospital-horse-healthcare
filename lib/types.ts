@@ -76,6 +76,7 @@ export interface MedicationSchedule {
   route: MedicationRoute;
   dosage?: string;          // 用量（自由入力、例: 10mg／1錠／5mL）
   times: string[];          // 投与予定時刻のリスト (HH:mm)
+  startDate?: string;        // 投与開始日 (YYYY-MM-DD)
   notes?: string;
   active: boolean;          // false＝投与終了（一覧には表示せず記録のみ残す）
 }

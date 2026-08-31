@@ -1,11 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, X, Pill, Syringe, Trash2, Edit2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, X, Pill, Syringe, Trash2, Edit2, AlertCircle, ChevronDown, ChevronUp, Calendar } from "lucide-react";
 import { Horse, MedicationSchedule, MedicationRoute } from "@/lib/types";
 
 function generateId() {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+}
+function getToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function formatDate(d: string) {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  return `${y}/${m}/${day}`;
 }
 
 const ROUTES: MedicationRoute[] = ["経口", "静脈注射"];
@@ -40,6 +49,7 @@ function MedicationForm({ initial, onSave, onClose }: MedicationFormProps) {
   const [route, setRoute] = useState<MedicationRoute>(initial?.route ?? "経口");
   const [dosage, setDosage] = useState(initial?.dosage ?? "");
   const [times, setTimes] = useState<string[]>(initial?.times && initial.times.length > 0 ? initial.times : ["08:00"]);
+  const [startDate, setStartDate] = useState(initial?.startDate ?? getToday());
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [error, setError] = useState("");
 
@@ -52,7 +62,7 @@ function MedicationForm({ initial, onSave, onClose }: MedicationFormProps) {
     if (!name.trim()) { setError("薬品名を入力してください。"); return; }
     const cleanTimes = [...new Set(times.filter(Boolean))].sort();
     if (cleanTimes.length === 0) { setError("投与時刻を1つ以上設定してください。"); return; }
-    onSave({ name: name.trim(), route, dosage: dosage.trim() || undefined, times: cleanTimes, notes: notes.trim() || undefined });
+    onSave({ name: name.trim(), route, dosage: dosage.trim() || undefined, times: cleanTimes, startDate, notes: notes.trim() || undefined });
   };
 
   return (
@@ -77,6 +87,17 @@ function MedicationForm({ initial, onSave, onClose }: MedicationFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-1">薬品名</label>
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="例：バイトリル"
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">投与開始日</label>
+              <div className="relative">
+                <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50 pointer-events-none">
+                  <Calendar size={15} className="text-gray-400 flex-shrink-0" />
+                  <span className="text-sm text-gray-700">{startDate === getToday() ? `今日 (${formatDate(startDate)})` : formatDate(startDate)}</span>
+                </div>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value || getToday())}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">投与経路</label>
@@ -247,11 +268,14 @@ export default function MedicationSection({ horse, onUpdate }: { horse: Horse; o
 
           <div className="pt-2 border-t border-gray-100 space-y-1.5">
             {activeSchedules.map((s) => (
-              <div key={s.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5">
+              <div key={s.id} className="flex items-start gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5">
                 <RouteBadge route={s.route} />
-                <span className="text-xs text-gray-600 flex-1 truncate">
-                  {s.name}{s.dosage ? `（${s.dosage}）` : ""} ・ {s.times.join("・")}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-600 truncate">
+                    {s.name}{s.dosage ? `（${s.dosage}）` : ""} ・ {s.times.join("・")}
+                  </p>
+                  <p className="text-[10px] text-gray-400">開始日：{s.startDate ? formatDate(s.startDate) : "不明"}</p>
+                </div>
                 <button onClick={() => { setEditTarget(s); setModal("edit"); }} className="p-1 hover:bg-gray-200 rounded-lg flex-shrink-0">
                   <Edit2 size={12} className="text-gray-400 hover:text-gray-600" />
                 </button>
@@ -274,11 +298,14 @@ export default function MedicationSection({ horse, onUpdate }: { horse: Horse; o
           {showEnded && (
             <div className="mt-2 space-y-1.5">
               {endedSchedules.map((s) => (
-                <div key={s.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5 opacity-70">
+                <div key={s.id} className="flex items-start gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5 opacity-70">
                   <RouteBadge route={s.route} />
-                  <span className="text-xs text-gray-500 flex-1 truncate">
-                    {s.name}{s.dosage ? `（${s.dosage}）` : ""} ・ {s.times.join("・")}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 truncate">
+                      {s.name}{s.dosage ? `（${s.dosage}）` : ""} ・ {s.times.join("・")}
+                    </p>
+                    <p className="text-[10px] text-gray-400">開始日：{s.startDate ? formatDate(s.startDate) : "不明"}</p>
+                  </div>
                   <button onClick={() => handleResume(s)} className="text-[10px] text-teal-600 hover:text-teal-700 flex-shrink-0 px-1">再開</button>
                   <button onClick={() => setDeleteTarget(s)} className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0">
                     <Trash2 size={12} className="text-red-300 hover:text-red-500" />
