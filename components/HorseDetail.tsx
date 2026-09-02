@@ -1483,12 +1483,16 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                   ) : (
                     <div className="space-y-1.5">
                       {sortedTemps.map((t, idx) => (
-                        <div key={t.id} className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400 w-20 flex-shrink-0">{formatDate(t.date)}</span>
-                          <span className={`flex-1 text-sm font-semibold ${idx === 0 ? "text-red-600" : "text-gray-700"}`}>
-                            {t.temperature} ℃
-                          </span>
-                          {t.notes && <span className="text-xs text-gray-400 truncate max-w-[30%]">{t.notes}</span>}
+                        <div key={t.id} className="flex items-start gap-2">
+                          <span className="text-xs text-gray-400 w-20 flex-shrink-0 pt-0.5">{formatDate(t.date)}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className={`text-sm font-semibold ${idx === 0 ? "text-red-600" : "text-gray-700"}`}>
+                              {t.temperature} ℃
+                            </span>
+                            {t.notes && (
+                              <p className="text-xs text-gray-500 whitespace-pre-wrap mt-0.5">{t.notes}</p>
+                            )}
+                          </div>
                           <button
                             onClick={() => handleDeleteTemperature(t.id)}
                             className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0"
