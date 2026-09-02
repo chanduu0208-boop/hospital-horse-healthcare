@@ -24,7 +24,7 @@ import {
   LogOut,
   Droplets,
 } from "lucide-react";
-import { Horse, HealthStatus, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord, ExamRecord, ExamType, ExcretionRecord } from "@/lib/types";
+import { Horse, HealthStatus, InpatientCareType, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord, ExamRecord, ExamType, ExcretionRecord } from "@/lib/types";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import PhotoCapture from "./PhotoCapture";
 import BloodTestSection from "./BloodTestSection";
@@ -827,6 +827,7 @@ interface EditHorseFormProps {
 function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
   const [name, setName] = useState(horse.name);
   const [status, setStatus] = useState<HealthStatus>(horse.status);
+  const [careType, setCareType] = useState<InpatientCareType | "">(horse.careType ?? "");
   const [archived, setArchived] = useState(!!horse.archived);
   const [exercise, setExercise] = useState<ExerciseStatus>(horse.exercise ?? "完全舎飼い");
   const [firstVisitDate, setFirstVisitDate] = useState(horse.firstVisitDate);
@@ -845,7 +846,19 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
     } else if (status !== "退院馬" && horse.status === "退院馬") {
       dischargeDate = undefined;
     }
-    onSave({ ...horse, name: name.trim(), status, dischargeDate, archived, exercise, firstVisitDate, diagnosis: diagnosis.trim(), pastHistory: pastHistory.trim() || undefined, notes: notes.trim() });
+    onSave({
+      ...horse,
+      name: name.trim(),
+      status,
+      careType: status === "入院馬" ? (careType || undefined) : undefined,
+      dischargeDate,
+      archived,
+      exercise,
+      firstVisitDate,
+      diagnosis: diagnosis.trim(),
+      pastHistory: pastHistory.trim() || undefined,
+      notes: notes.trim(),
+    });
   };
 
   return (
@@ -868,9 +881,9 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">ステータス</label>
               <div className="flex gap-2">
-                {(["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).map((s) => {
+                {(["入院馬", "譲渡馬", "退院馬"] as HealthStatus[]).map((s) => {
                   const colors: Record<HealthStatus, { sel: string; badge: string }> = {
-                    術後入院: { sel: "border-red-400 bg-red-50", badge: "bg-red-100 text-red-700 border-red-200" },
+                    入院馬: { sel: "border-red-400 bg-red-50", badge: "bg-red-100 text-red-700 border-red-200" },
                     譲渡馬: { sel: "border-emerald-400 bg-emerald-50", badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
                     退院馬: { sel: "border-slate-400 bg-slate-50", badge: "bg-slate-100 text-slate-700 border-slate-200" },
                   };
@@ -883,12 +896,28 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
                 })}
               </div>
             </div>
+            {status === "入院馬" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">区分（内科／様子見）</label>
+                <div className="flex gap-2">
+                  {(["内科", "様子見"] as InpatientCareType[]).map((c) => (
+                    <button key={c} type="button" onClick={() => setCareType((v) => (v === c ? "" : c))}
+                      className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold transition-all ${
+                        careType === c ? "border-blue-400 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                      }`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">手術をせず経過観察のみの場合は「様子見」を選択してください（任意）。</p>
+              </div>
+            )}
             <label className="flex items-start gap-2.5 p-3 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer">
               <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)}
                 className="mt-0.5 w-4 h-4 accent-slate-600 flex-shrink-0" />
               <span>
                 <span className="block text-sm font-medium text-gray-700">経過観察を終了する（アーカイブ）</span>
-                <span className="block text-xs text-gray-400 mt-0.5">術後入院・譲渡馬・退院馬のどの一覧タブにも表示されなくなります。馬管理メニューの検索からはいつでも見つけられ、記録も残ります。</span>
+                <span className="block text-xs text-gray-400 mt-0.5">入院馬・譲渡馬・退院馬のどの一覧タブにも表示されなくなります。馬管理メニューの検索からはいつでも見つけられ、記録も残ります。</span>
               </span>
             </label>
             <div>
@@ -1136,7 +1165,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
       <main className="flex-1 overflow-y-auto p-4 pb-8 space-y-4">
         {/* 馬情報カード */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-          <div className={`h-2 ${horse.status === "術後入院" ? "bg-gradient-to-r from-red-300 to-red-500" : "bg-gradient-to-r from-emerald-300 to-emerald-500"}`} />
+          <div className={`h-2 ${horse.status === "入院馬" ? "bg-gradient-to-r from-red-300 to-red-500" : "bg-gradient-to-r from-emerald-300 to-emerald-500"}`} />
           <div className="p-4">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               {/* 補液（タップでON/OFF） */}
@@ -1152,6 +1181,11 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                 {horse.fluidTherapy ? "補液中" : "補液なし"}
               </button>
               <ExerciseBadge exercise={horse.exercise ?? "完全舎飼い"} />
+              {horse.status === "入院馬" && horse.careType && (
+                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-blue-700 flex-shrink-0">
+                  {horse.careType}
+                </span>
+              )}
               {/* 給餌（運動状況の横に小さく表示、タップで展開） */}
               <button
                 onClick={() => setIsFeedingExpanded((v) => !v)}
@@ -1300,7 +1334,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                         onUpdate({
                           ...horse,
                           dischargeDate: newDate,
-                          status: newDate ? "退院馬" : (horse.status === "退院馬" ? "術後入院" : horse.status),
+                          status: newDate ? "退院馬" : (horse.status === "退院馬" ? "入院馬" : horse.status),
                         });
                       }}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -1314,7 +1348,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                         onUpdate({
                           ...horse,
                           dischargeDate: undefined,
-                          status: horse.status === "退院馬" ? "術後入院" : horse.status,
+                          status: horse.status === "退院馬" ? "入院馬" : horse.status,
                         });
                       }}
                       className="text-xs text-gray-400 flex-shrink-0 relative z-10"

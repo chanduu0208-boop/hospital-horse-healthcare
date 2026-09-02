@@ -1,4 +1,6 @@
-export type HealthStatus = "術後入院" | "譲渡馬" | "退院馬";
+export type HealthStatus = "入院馬" | "譲渡馬" | "退院馬";
+
+export type InpatientCareType = "内科" | "様子見";
 
 export type ExerciseStatus = "引き運動" | "完全舎飼い" | "サンシャインパドック";
 
@@ -102,6 +104,7 @@ export interface Horse {
   id: string;
   name: string;
   status: HealthStatus;
+  careType?: InpatientCareType; // 入院馬の中での区分（内科／様子見）。振り分け時にのみ選択
   exercise: ExerciseStatus;
   firstVisitDate: string;
   dischargeDate?: string;   // 退院日（入力すると自動的に退院馬へ移動）

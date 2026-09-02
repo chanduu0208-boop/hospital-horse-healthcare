@@ -4,7 +4,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "1",
     name: "サンライズスター",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "完全舎飼い",
     firstVisitDate: "2026-03-15",
     diagnosis: "右前脚跛行",
@@ -55,7 +55,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "2",
     name: "ムーンライトソナタ",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "引き運動",
     firstVisitDate: "2026-03-28",
     diagnosis: "消化器疾患（疝痛）",
@@ -69,7 +69,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "3",
     name: "ゴールデンフラッシュ",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "完全舎飼い",
     firstVisitDate: "2026-04-01",
     diagnosis: "蹄葉炎（軽度）",
@@ -83,7 +83,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "4",
     name: "シルバーウィンド",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "引き運動",
     firstVisitDate: "2026-04-05",
     diagnosis: "上気道炎",
@@ -97,7 +97,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "5",
     name: "スターダスト",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "サンシャインパドック",
     firstVisitDate: "2026-02-10",
     diagnosis: "筋肉疲労・軽度筋炎",
@@ -112,7 +112,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "6",
     name: "レインボーブリッジ",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "サンシャインパドック",
     firstVisitDate: "2026-02-20",
     diagnosis: "皮膚炎（腹部）",
@@ -127,7 +127,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "7",
     name: "ダイヤモンドスター",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "引き運動",
     firstVisitDate: "2026-03-01",
     diagnosis: "軽度跛行（回復期）",
@@ -141,7 +141,7 @@ export const sampleHorses: Horse[] = [
   {
     id: "8",
     name: "オーシャンブリーズ",
-    status: "術後入院",
+    status: "入院馬",
     exercise: "サンシャインパドック",
     firstVisitDate: "2026-03-05",
     diagnosis: "結膜炎（左眼）",

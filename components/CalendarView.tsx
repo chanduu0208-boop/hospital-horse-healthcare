@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Horse, HealthStatus, CalendarEvent } from "@/lib/types";
 
-const STATUS_GROUPS: HealthStatus[] = ["術後入院", "譲渡馬", "退院馬"];
+const STATUS_GROUPS: HealthStatus[] = ["入院馬", "譲渡馬", "退院馬"];
 
 // ============================================================
 // 定数

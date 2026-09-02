@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Plus, Check, Calendar, X, AlertCircle, CalendarDays } from "lucide-react";
-import { Horse, HealthStatus, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord, ExamRecord, MedicationSchedule, ExcretionRecord } from "@/lib/types";
+import { Horse, HealthStatus, InpatientCareType, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord, ExamRecord, MedicationSchedule, ExcretionRecord } from "@/lib/types";
 import { sampleHorses } from "@/lib/sampleData";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
 import SideDrawer from "@/components/SideDrawer";
@@ -18,17 +18,18 @@ const CALENDAR_KEY  = "horse-hospital-calendar-v1";
 // 旧バージョンのキー（起動時に削除）
 const OLD_KEYS = ["horse-health-v1", "horse-health-v2", "horse-health-v3", "horse-health-v4"];
 
-const VALID_STATUSES: HealthStatus[] = ["術後入院", "譲渡馬", "退院馬"];
-// 旧ステータスからの読み替え（往診中・経過観察→術後入院、健康→譲渡馬）
+const VALID_STATUSES: HealthStatus[] = ["入院馬", "譲渡馬", "退院馬"];
+// 旧ステータスからの読み替え（往診中・経過観察・術後入院→入院馬、健康→譲渡馬）
 const LEGACY_STATUS_MAP: Record<string, HealthStatus> = {
-  往診中: "術後入院",
-  経過観察: "術後入院",
+  往診中: "入院馬",
+  経過観察: "入院馬",
+  術後入院: "入院馬",
   健康: "譲渡馬",
 };
 function resolveStatus(v: unknown): HealthStatus {
   if (typeof v === "string" && VALID_STATUSES.includes(v as HealthStatus)) return v as HealthStatus;
   if (typeof v === "string" && LEGACY_STATUS_MAP[v]) return LEGACY_STATUS_MAP[v];
-  return "術後入院";
+  return "入院馬";
 }
 
 // 旧運動状況からの読み替え
@@ -54,6 +55,7 @@ function migrateHorse(h: Record<string, unknown>): Horse {
     id: (h.id as string) ?? generateId(),
     name: (h.name as string) ?? "不明",
     status: resolveStatus(h.status),
+    careType: h.careType as InpatientCareType | undefined,
     exercise: resolveExercise(h.exercise),
     firstVisitDate: (h.firstVisitDate as string) ?? getToday(),
     dischargeDate: h.dischargeDate as string | undefined,
@@ -121,13 +123,13 @@ function generateId(): string {
 }
 
 const TAB_COLORS: Record<HealthStatus, { dot: string; active: string }> = {
-  術後入院: { dot: "bg-red-400",     active: "text-red-600" },
+  入院馬: { dot: "bg-red-400",     active: "text-red-600" },
   譲渡馬:   { dot: "bg-emerald-400", active: "text-emerald-600" },
   退院馬:   { dot: "bg-slate-400",   active: "text-slate-600" },
 };
 
 const STATUS_CARD_BAR: Record<HealthStatus, string> = {
-  術後入院: "bg-gradient-to-b from-red-300 to-red-500",
+  入院馬: "bg-gradient-to-b from-red-300 to-red-500",
   譲渡馬:   "bg-gradient-to-b from-emerald-300 to-emerald-500",
   退院馬:   "bg-gradient-to-b from-slate-300 to-slate-500",
 };
@@ -179,6 +181,11 @@ function HorseCard({
             <span className="font-bold text-base text-gray-900 flex-1 min-w-0 leading-snug">
               {horse.name}
             </span>
+            {horse.status === "入院馬" && horse.careType && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 flex-shrink-0">
+                {horse.careType}
+              </span>
+            )}
             <ExerciseBadge exercise={horse.exercise} />
           </div>
 
@@ -198,7 +205,7 @@ function HorseCard({
           </div>
         </div>
 
-        {/* 本日確認チェック（術後入院タブのみ） */}
+        {/* 本日確認チェック（入院馬タブのみ） */}
         {showVisitCheck && (
           <div className="flex flex-col items-center justify-center px-3.5 gap-1 border-l border-gray-50">
             <button
@@ -415,7 +422,7 @@ function QuickRecordModal({
 // ============================================================
 
 const STATUS_ADD_STYLE: Record<HealthStatus, { sel: string; badge: string }> = {
-  術後入院: { sel: "border-red-400 bg-red-50", badge: "bg-red-100 text-red-700 border-red-200" },
+  入院馬: { sel: "border-red-400 bg-red-50", badge: "bg-red-100 text-red-700 border-red-200" },
   譲渡馬:   { sel: "border-emerald-400 bg-emerald-50", badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
   退院馬:   { sel: "border-slate-400 bg-slate-50", badge: "bg-slate-100 text-slate-700 border-slate-200" },
 };
@@ -423,7 +430,7 @@ const STATUS_ADD_STYLE: Record<HealthStatus, { sel: string; badge: string }> = {
 function AddHorseModal({
   onSave,
   onClose,
-  initialStatus = "術後入院",
+  initialStatus = "入院馬",
 }: {
   onSave: (data: Omit<Horse, "id" | "records">) => void;
   onClose: () => void;
@@ -431,6 +438,7 @@ function AddHorseModal({
 }) {
   const [name, setName] = useState("");
   const [status, setStatus] = useState<HealthStatus>(initialStatus);
+  const [careType, setCareType] = useState<InpatientCareType | "">("");
   const [exercise, setExercise] = useState<ExerciseStatus>("完全舎飼い");
   const [firstVisitDate, setFirstVisitDate] = useState(getToday());
   const [diagnosis, setDiagnosis] = useState("");
@@ -444,6 +452,7 @@ function AddHorseModal({
     onSave({
       name: name.trim(),
       status,
+      careType: status === "入院馬" ? (careType || undefined) : undefined,
       exercise,
       firstVisitDate,
       diagnosis: diagnosis.trim() || "なし",
@@ -487,7 +496,7 @@ function AddHorseModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">ステータス</label>
               <div className="flex gap-2">
-                {(["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).map((s) => (
+                {(["入院馬", "譲渡馬", "退院馬"] as HealthStatus[]).map((s) => (
                   <label key={s} className={`flex-1 flex justify-center cursor-pointer py-2 rounded-xl border-2 transition-all ${status === s ? STATUS_ADD_STYLE[s].sel : "border-gray-200"}`}>
                     <input type="radio" value={s} checked={status === s} onChange={() => setStatus(s)} className="sr-only" />
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${STATUS_ADD_STYLE[s].badge}`}>{s}</span>
@@ -495,6 +504,24 @@ function AddHorseModal({
                 ))}
               </div>
             </div>
+
+            {/* 区分（内科／様子見） */}
+            {status === "入院馬" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">区分（内科／様子見）</label>
+                <div className="flex gap-2">
+                  {(["内科", "様子見"] as InpatientCareType[]).map((c) => (
+                    <button key={c} type="button" onClick={() => setCareType((v) => (v === c ? "" : c))}
+                      className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold transition-all ${
+                        careType === c ? "border-blue-400 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                      }`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">手術をせず経過観察のみの場合は「様子見」を選択してください（任意）。</p>
+              </div>
+            )}
 
             {/* 運動状況 */}
             <div>
@@ -558,7 +585,7 @@ function AddHorseModal({
 export default function HomePage() {
   const [horses, setHorses] = useState<Horse[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<HealthStatus>("術後入院");
+  const [activeTab, setActiveTab] = useState<HealthStatus>("入院馬");
   const [selectedHorseId, setSelectedHorseId] = useState<string | null>(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [showAddHorse, setShowAddHorse] = useState(false);
@@ -643,20 +670,20 @@ export default function HomePage() {
   const filteredHorses = horses.filter((h) => h.status === activeTab && !h.archived);
 
   const sortedHorses =
-    activeTab === "術後入院"
+    activeTab === "入院馬"
       ? [
           ...filteredHorses.filter((h) => h.visitCheckedDate !== getToday()),
           ...filteredHorses.filter((h) => h.visitCheckedDate === getToday()),
         ]
       : filteredHorses;
 
-  const tabCounts = (["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).reduce(
+  const tabCounts = (["入院馬", "譲渡馬", "退院馬"] as HealthStatus[]).reduce(
     (acc, tab) => { acc[tab] = horses.filter((h) => h.status === tab && !h.archived).length; return acc; },
     {} as Record<HealthStatus, number>
   );
 
-  const todayCheckedCount = horses.filter((h) => h.status === "術後入院" && h.visitCheckedDate === getToday()).length;
-  const totalVisitCount = horses.filter((h) => h.status === "術後入院").length;
+  const todayCheckedCount = horses.filter((h) => h.status === "入院馬" && h.visitCheckedDate === getToday()).length;
+  const totalVisitCount = horses.filter((h) => h.status === "入院馬").length;
 
   const selectedHorse = selectedHorseId ? horses.find((h) => h.id === selectedHorseId) ?? null : null;
 
@@ -749,7 +776,7 @@ export default function HomePage() {
       </header>
 
       {/* 本日の確認バナー */}
-      {activeTab === "術後入院" && totalVisitCount > 0 && (
+      {activeTab === "入院馬" && totalVisitCount > 0 && (
         <div className={`mx-4 mt-3 mb-1 px-4 py-2.5 rounded-xl flex items-center justify-between ${
           todayCheckedCount === totalVisitCount ? "bg-emerald-50 border border-emerald-200" : "bg-blue-50 border border-blue-100"
         }`}>
@@ -770,7 +797,7 @@ export default function HomePage() {
           </div>
         ) : (
           <>
-            {activeTab === "術後入院" && (() => {
+            {activeTab === "入院馬" && (() => {
               const unchecked = sortedHorses.filter((h) => h.visitCheckedDate !== getToday());
               const checked   = sortedHorses.filter((h) => h.visitCheckedDate === getToday());
               return (
@@ -796,7 +823,7 @@ export default function HomePage() {
                 </>
               );
             })()}
-            {activeTab !== "術後入院" && sortedHorses.map((horse) => (
+            {activeTab !== "入院馬" && sortedHorses.map((horse) => (
               <HorseCard key={horse.id} horse={horse} onTap={() => setSelectedHorseId(horse.id)} />
             ))}
           </>
@@ -806,7 +833,7 @@ export default function HomePage() {
       {/* ボトムタブ */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-gray-200 shadow-lg">
         <div className="flex">
-          {(["術後入院", "譲渡馬", "退院馬"] as HealthStatus[]).map((tab) => {
+          {(["入院馬", "譲渡馬", "退院馬"] as HealthStatus[]).map((tab) => {
             const isActive = activeTab === tab;
             const colors = TAB_COLORS[tab];
             return (

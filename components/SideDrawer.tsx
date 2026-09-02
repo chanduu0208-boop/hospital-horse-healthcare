@@ -5,7 +5,7 @@ import { X, Search, Trash2, Plus, Settings, CheckSquare, Square, Archive } from 
 import { Horse, HealthStatus } from "@/lib/types";
 import { EXERCISE_STYLE } from "@/lib/exerciseConfig";
 
-const STATUSES: HealthStatus[] = ["術後入院", "譲渡馬", "退院馬"];
+const STATUSES: HealthStatus[] = ["入院馬", "譲渡馬", "退院馬"];
 
 interface Props {
   isOpen: boolean;
@@ -17,13 +17,13 @@ interface Props {
 }
 
 const STATUS_DOT: Record<HealthStatus, string> = {
-  術後入院: "bg-red-400",
+  入院馬: "bg-red-400",
   譲渡馬: "bg-emerald-400",
   退院馬: "bg-slate-400",
 };
 
 const STATUS_LABEL_COLOR: Record<HealthStatus, string> = {
-  術後入院: "text-red-600",
+  入院馬: "text-red-600",
   譲渡馬: "text-emerald-600",
   退院馬: "text-slate-600",
 };
@@ -45,7 +45,7 @@ export default function SideDrawer({
   );
 
   const grouped = {
-    術後入院: filtered.filter((h) => h.status === "術後入院" && !h.archived),
+    入院馬: filtered.filter((h) => h.status === "入院馬" && !h.archived),
     譲渡馬: filtered.filter((h) => h.status === "譲渡馬" && !h.archived),
     退院馬: filtered.filter((h) => h.status === "退院馬" && !h.archived),
   };
