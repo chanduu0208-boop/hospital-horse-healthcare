@@ -5,6 +5,7 @@ import { Plus, Check, Calendar, X, AlertCircle, CalendarDays } from "lucide-reac
 import { Horse, HealthStatus, InpatientCareType, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord, ExamRecord, MedicationSchedule, ExcretionRecord } from "@/lib/types";
 import { sampleHorses } from "@/lib/sampleData";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
+import { CARE_TYPE_STYLE } from "@/lib/careTypeConfig";
 import SideDrawer from "@/components/SideDrawer";
 import HorseDetail from "@/components/HorseDetail";
 import CalendarView from "@/components/CalendarView";
@@ -134,6 +135,15 @@ const STATUS_CARD_BAR: Record<HealthStatus, string> = {
   退院馬:   "bg-gradient-to-b from-slate-300 to-slate-500",
 };
 
+// 入院馬は区分（内科／様子見）が設定されていればその色、未設定なら通常の赤系
+function getCardBarClass(horse: Horse): string {
+  if (horse.status === "入院馬" && horse.careType) {
+    const s = CARE_TYPE_STYLE[horse.careType];
+    return `bg-gradient-to-b ${s.barFrom} ${s.barTo}`;
+  }
+  return STATUS_CARD_BAR[horse.status];
+}
+
 // ============================================================
 // 運動バッジ
 // ============================================================
@@ -172,7 +182,7 @@ function HorseCard({
     <div className="rounded-2xl shadow-sm mb-3 overflow-hidden flex flex-col hover:shadow-md transition-shadow border border-gray-100 bg-white">
       <div className="flex items-stretch">
         {/* ステータスカラーバー（左側） */}
-        <div className={`w-1.5 flex-shrink-0 ${STATUS_CARD_BAR[horse.status]}`} />
+        <div className={`w-1.5 flex-shrink-0 ${getCardBarClass(horse)}`} />
 
         {/* メインコンテンツ */}
         <div className="flex-1 p-3.5 cursor-pointer min-w-0 active:bg-gray-50" onClick={onTap}>
@@ -182,7 +192,7 @@ function HorseCard({
               {horse.name}
             </span>
             {horse.status === "入院馬" && horse.careType && (
-              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 flex-shrink-0">
+              <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${CARE_TYPE_STYLE[horse.careType].badge}`}>
                 {horse.careType}
               </span>
             )}
@@ -513,7 +523,7 @@ function AddHorseModal({
                   {(["内科", "様子見"] as InpatientCareType[]).map((c) => (
                     <button key={c} type="button" onClick={() => setCareType((v) => (v === c ? "" : c))}
                       className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold transition-all ${
-                        careType === c ? "border-blue-400 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                        careType === c ? CARE_TYPE_STYLE[c].select : "border-gray-200 text-gray-500 hover:border-gray-300"
                       }`}>
                       {c}
                     </button>

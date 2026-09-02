@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Horse, HealthStatus, InpatientCareType, HorseRecord, ExerciseStatus, WeightRecord, WeightSession, TemperatureRecord, FeedingRecord, SurgeryRecord, ExamRecord, ExamType, ExcretionRecord } from "@/lib/types";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
+import { CARE_TYPE_STYLE } from "@/lib/careTypeConfig";
 import PhotoCapture from "./PhotoCapture";
 import BloodTestSection from "./BloodTestSection";
 import MedicationSection from "./MedicationSection";
@@ -903,7 +904,7 @@ function EditHorseForm({ horse, onSave, onClose }: EditHorseFormProps) {
                   {(["内科", "様子見"] as InpatientCareType[]).map((c) => (
                     <button key={c} type="button" onClick={() => setCareType((v) => (v === c ? "" : c))}
                       className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold transition-all ${
-                        careType === c ? "border-blue-400 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                        careType === c ? CARE_TYPE_STYLE[c].select : "border-gray-200 text-gray-500 hover:border-gray-300"
                       }`}>
                       {c}
                     </button>
@@ -1165,7 +1166,13 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
       <main className="flex-1 overflow-y-auto p-4 pb-8 space-y-4">
         {/* 馬情報カード */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-          <div className={`h-2 ${horse.status === "入院馬" ? "bg-gradient-to-r from-red-300 to-red-500" : "bg-gradient-to-r from-emerald-300 to-emerald-500"}`} />
+          <div className={`h-2 ${
+            horse.status === "入院馬"
+              ? horse.careType
+                ? `bg-gradient-to-r ${CARE_TYPE_STYLE[horse.careType].barFrom} ${CARE_TYPE_STYLE[horse.careType].barTo}`
+                : "bg-gradient-to-r from-red-300 to-red-500"
+              : "bg-gradient-to-r from-emerald-300 to-emerald-500"
+          }`} />
           <div className="p-4">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               {/* 補液（タップでON/OFF） */}
@@ -1182,7 +1189,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
               </button>
               <ExerciseBadge exercise={horse.exercise ?? "完全舎飼い"} />
               {horse.status === "入院馬" && horse.careType && (
-                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-blue-700 flex-shrink-0">
+                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border flex-shrink-0 ${CARE_TYPE_STYLE[horse.careType].badge}`}>
                   {horse.careType}
                 </span>
               )}
