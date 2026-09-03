@@ -1017,7 +1017,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
   const handleAddRecord = (record: Omit<HorseRecord, "id">) => {
     const updated: Horse = {
       ...horse,
-      records: [...horse.records, { ...record, id: generateId() }].sort(
+      records: [{ ...record, id: generateId() }, ...horse.records].sort(
         (a, b) => b.date.localeCompare(a.date)
       ),
     };
@@ -1045,7 +1045,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
   const handleAddWeight = (wr: Omit<WeightRecord, "id">) => {
     const updated: Horse = {
       ...horse,
-      weightRecords: [...(horse.weightRecords ?? []), { ...wr, id: generateId() }]
+      weightRecords: [{ ...wr, id: generateId() }, ...(horse.weightRecords ?? [])]
         .sort((a, b) => b.date.localeCompare(a.date)),
     };
     onUpdate(updated);
@@ -1059,7 +1059,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
   const handleAddTemperature = (r: Omit<TemperatureRecord, "id">) => {
     onUpdate({
       ...horse,
-      temperatureRecords: [...(horse.temperatureRecords ?? []), { ...r, id: generateId() }]
+      temperatureRecords: [{ ...r, id: generateId() }, ...(horse.temperatureRecords ?? [])]
         .sort((a, b) => b.date.localeCompare(a.date)),
     });
     setModal(null);
@@ -1072,7 +1072,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
   const handleAddExcretion = (r: Omit<ExcretionRecord, "id">) => {
     onUpdate({
       ...horse,
-      excretionRecords: [...(horse.excretionRecords ?? []), { ...r, id: generateId() }]
+      excretionRecords: [{ ...r, id: generateId() }, ...(horse.excretionRecords ?? [])]
         .sort((a, b) => b.date.localeCompare(a.date)),
     });
     setModal(null);
@@ -1085,7 +1085,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
   const handleAddFeeding = (r: Omit<FeedingRecord, "id">) => {
     onUpdate({
       ...horse,
-      feedingRecords: [...(horse.feedingRecords ?? []), { ...r, id: generateId() }]
+      feedingRecords: [{ ...r, id: generateId() }, ...(horse.feedingRecords ?? [])]
         .sort((a, b) => b.date.localeCompare(a.date)),
     });
     setModal(null);
@@ -1098,7 +1098,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
   const handleAddSurgery = (r: Omit<SurgeryRecord, "id">) => {
     onUpdate({
       ...horse,
-      surgeryRecords: [...(horse.surgeryRecords ?? []), { ...r, id: generateId() }]
+      surgeryRecords: [{ ...r, id: generateId() }, ...(horse.surgeryRecords ?? [])]
         .sort((a, b) => b.date.localeCompare(a.date)),
     });
     setModal(null);
@@ -1112,7 +1112,7 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
     const record: ExamRecord = { id: generateId(), date: getToday(), type: exam.key };
     onUpdate({
       ...horse,
-      examRecords: [...(horse.examRecords ?? []), record].sort((a, b) => b.date.localeCompare(a.date)),
+      examRecords: [record, ...(horse.examRecords ?? [])].sort((a, b) => b.date.localeCompare(a.date)),
     });
     onAddCalendarEvent(exam.calendarTitle);
   };

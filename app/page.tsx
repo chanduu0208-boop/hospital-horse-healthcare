@@ -869,7 +869,7 @@ export default function HomePage() {
             onSave={(record) => {
               updateHorse({
                 ...horse,
-                records: [...horse.records, { ...record, id: `${Date.now()}_${Math.random().toString(36).substr(2, 8)}` }]
+                records: [{ ...record, id: `${Date.now()}_${Math.random().toString(36).substr(2, 8)}` }, ...horse.records]
                   .sort((a, b) => b.date.localeCompare(a.date)),
               });
               setVisitRecordHorseId(null);

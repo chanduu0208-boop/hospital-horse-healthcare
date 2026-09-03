@@ -408,7 +408,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
         date: colDate,
         items: [{ key: item.key, label: item.label, value: num, unit: item.unit || undefined }],
       };
-      onUpdate({ ...horse, bloodTestRecords: [...records, newRecord].sort(compareRecordsDesc) });
+      onUpdate({ ...horse, bloodTestRecords: [newRecord, ...records].sort(compareRecordsDesc) });
     }
   };
 
@@ -474,7 +474,7 @@ export default function BloodTestSection({ horse, onUpdate }: { horse: Horse; on
   }, [records, selectedItemKey]);
 
   const handleSave = (r: Omit<BloodTestRecord, "id">) => {
-    onUpdate({ ...horse, bloodTestRecords: [...records, { ...r, id: generateId() }] });
+    onUpdate({ ...horse, bloodTestRecords: [{ ...r, id: generateId() }, ...records] });
     setModal(null);
     setPrefill(undefined);
   };
