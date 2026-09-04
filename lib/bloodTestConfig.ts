@@ -46,6 +46,7 @@ export const BLOOD_TEST_PRESETS: BloodTestItemPreset[] = [
   { key: "Na", label: "ナトリウム (Na)", unit: "mEq/L", category: "生化学" },
   { key: "K", label: "カリウム (K)", unit: "mEq/L", category: "生化学" },
   { key: "Cl", label: "クロール (Cl)", unit: "mEq/L", category: "生化学" },
+  { key: "HCO3", label: "重炭酸 (HCO3)", unit: "mEq/L", category: "生化学" },
   { key: "Ca", label: "カルシウム (Ca)", unit: "mg/dL", category: "生化学" },
   { key: "P", label: "リン (P)", unit: "mg/dL", category: "生化学" },
   { key: "ALP", label: "アルカリフォスファターゼ (ALP)", unit: "U/L", category: "生化学" },
@@ -60,6 +61,7 @@ export const BLOOD_TEST_PRESETS: BloodTestItemPreset[] = [
   { key: "sAMY", label: "血清アミラーゼ", unit: "U/L", category: "生化学" },
   { key: "uAMY", label: "尿アミラーゼ", unit: "U/L", category: "生化学" },
   { key: "Glu", label: "グルコース／血糖 (Glu)", unit: "mg/dL", category: "生化学" },
+  { key: "Lac", label: "乳酸値 (Lactate)", unit: "mmol/L", category: "生化学" },
   { key: "CRP", label: "CRP", unit: "mg/dL", category: "生化学" },
 ];
 
