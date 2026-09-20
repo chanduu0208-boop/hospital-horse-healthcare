@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Check, Calendar, X, AlertCircle, CalendarDays } from "lucide-react";
+import { Plus, Check, Calendar, X, AlertCircle, CalendarDays, StickyNote } from "lucide-react";
 import { Horse, HealthStatus, InpatientCareType, ExerciseStatus, HorseRecord, CalendarEvent, WeightRecord, TemperatureRecord, BloodTestRecord, FeedingRecord, SurgeryRecord, ExamRecord, MedicationSchedule, ExcretionRecord } from "@/lib/types";
 import { sampleHorses } from "@/lib/sampleData";
 import { EXERCISE_LIST, EXERCISE_STYLE } from "@/lib/exerciseConfig";
@@ -177,6 +177,9 @@ function HorseCard({
 }) {
   const today = getToday();
   const isChecked = horse.visitCheckedDate === today;
+  const latestRecord = horse.status === "退院馬" && horse.records.length > 0
+    ? [...horse.records].sort((a, b) => b.date.localeCompare(a.date))[0]
+    : null;
 
   return (
     <div className="rounded-2xl shadow-sm mb-3 overflow-hidden flex flex-col hover:shadow-md transition-shadow border border-gray-100 bg-white">
@@ -213,6 +216,17 @@ function HorseCard({
               <span className="text-gray-400 font-normal">診断名なし</span>
             )}
           </div>
+
+          {/* 4行目：退院馬のみ、履歴の最新の経過メモ */}
+          {horse.status === "退院馬" && latestRecord && (
+            <div className="flex items-start gap-1.5 mt-1.5 pt-1.5 border-t border-gray-100 text-xs text-gray-500">
+              <StickyNote size={12} className="flex-shrink-0 mt-0.5 text-slate-400" />
+              <span className="line-clamp-2 leading-snug">
+                <span className="text-gray-400">{formatDate(latestRecord.date)}：</span>
+                {latestRecord.condition}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* 本日確認チェック（入院馬タブのみ） */}
