@@ -1148,6 +1148,9 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
     : null;
   const postOpDays = rawPostOpDays !== null && rawPostOpDays >= 0 ? rawPostOpDays : null;
 
+  // 入院◯日目（入院日を1日目として数える）。手術をしていない馬の経過日数表示用
+  const stayDays = Math.max(1, Math.floor((new Date(getToday()).getTime() - new Date(horse.firstVisitDate).getTime()) / 86400000) + 1);
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* ヘッダー */}
@@ -1268,6 +1271,9 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                     <p className="text-sm font-semibold text-gray-800">
                       {formatDate(horse.firstVisitDate)}
                     </p>
+                    {postOpDays === null && (
+                      <span className="inline-block mt-0.5 text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">入院{stayDays}日目</span>
+                    )}
                   </div>
                 </div>
                 <button
