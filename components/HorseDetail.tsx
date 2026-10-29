@@ -1142,8 +1142,11 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
 
   const sortedRecords = [...horse.records].sort((a, b) => b.date.localeCompare(a.date));
 
-  // 入院◯日目（入院日を1日目として数える）
-  const stayDays = Math.max(1, Math.floor((new Date(getToday()).getTime() - new Date(horse.firstVisitDate).getTime()) / 86400000) + 1);
+  // 術後◯日（直近の手術日を0日として数える。手術日が未来の場合は表示しない）
+  const rawPostOpDays = sortedSurgeries.length > 0
+    ? Math.floor((new Date(getToday()).getTime() - new Date(sortedSurgeries[0].date).getTime()) / 86400000)
+    : null;
+  const postOpDays = rawPostOpDays !== null && rawPostOpDays >= 0 ? rawPostOpDays : null;
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -1262,9 +1265,8 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                   <Calendar size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <span className="text-xs text-gray-500">入院日</span>
-                    <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-gray-800">
                       {formatDate(horse.firstVisitDate)}
-                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{stayDays}日目</span>
                     </p>
                   </div>
                 </div>
@@ -1275,11 +1277,14 @@ export default function HorseDetail({ horse, onBack, onUpdate, onDelete, onAddCa
                   <Scissors size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <span className="text-xs text-gray-500">手術日</span>
-                    <p className="flex items-center gap-1 text-sm font-semibold text-gray-800">
+                    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-semibold text-gray-800">
                       {sortedSurgeries.length > 0
                         ? <>{formatDate(sortedSurgeries[0].date)}{sortedSurgeries.length > 1 && <span className="text-xs font-normal text-gray-500"> 他{sortedSurgeries.length - 1}回</span>}</>
                         : <span className="text-gray-400 font-normal text-xs">記録なし</span>
                       }
+                      {postOpDays !== null && (
+                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">術後{postOpDays}日</span>
+                      )}
                       <ChevronDown size={13} className={`text-gray-400 transition-transform ${isSurgeryExpanded ? "rotate-180" : ""}`} />
                     </p>
                   </div>
